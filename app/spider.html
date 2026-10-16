@@ -1,0 +1,46 @@
+<!DOCTYPE html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>蜘蛛 · Spider</title>
+<style>
+:root{--pk:#ff4fb4;--card:#111116;--ln:#24242c;--txt:#ececf1;--mut:#8a8a99;--g:#3dff8f;--r:#ff4d5e;--y:#ffd23f;--c:#3fd5ff}
+*{box-sizing:border-box}html,body{margin:0}
+body{background:#e04aa6;background-image:linear-gradient(rgba(255,255,255,.05) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.05) 1px,transparent 1px);background-size:6px 6px;color:var(--txt);font-family:ui-monospace,'JetBrains Mono',Menlo,Consolas,monospace;padding:10px 12px}
+.hd{display:flex;align-items:center;gap:14px;margin-bottom:10px}
+.hd .lg{width:34px;height:34px;border-radius:8px;background:#111;display:grid;place-items:center}
+.hd h1{margin:0;font:900 26px/1 system-ui,sans-serif;color:#111}.hd .sub{font-size:11px;color:#2a0b1e;letter-spacing:1px}
+.paper{background:#111;color:var(--y);font-size:10px;font-weight:900;padding:3px 7px;border-radius:4px;letter-spacing:1px}
+#roomnav{display:flex;gap:4px;align-items:center;margin-left:10px}
+#roomnav a{color:#2a0b1e;text-decoration:none;font:800 12px ui-monospace,monospace;padding:4px 9px;border:2px solid #111;border-radius:5px;letter-spacing:1px}
+#roomnav a.on{background:#111;color:#ff4fb4}#roomnav a:hover{background:#111;color:#fff}
+#langBtn{background:#111;color:#ffd23f;border:2px solid #111;border-radius:5px;font:800 12px ui-monospace,monospace;padding:4px 9px;cursor:pointer}
+.hd .sp{flex:1}.hd .ttl{font:900 20px system-ui,sans-serif;color:#111}
+.pn{background:var(--card);border-radius:7px;padding:10px 12px;box-shadow:0 2px 0 rgba(0,0,0,.35);margin-bottom:8px}
+.ph{display:flex;justify-content:space-between;font-size:11px;letter-spacing:1.5px;color:#d6d6e0}.ph b{color:var(--pk)}
+.chip{display:inline-block;border:1px dashed #44445a;padding:3px 8px;border-radius:4px;color:#d6d6e0;font-size:11px;margin:3px 3px 0 0}
+.dot{display:inline-block;width:9px;height:9px;border-radius:50%;vertical-align:middle;margin-right:6px}
+iframe{width:100%;height:72vh;border:0;border-radius:7px;background:#0b0b0f;box-shadow:0 2px 0 rgba(0,0,0,.35)}
+.mut{color:var(--mut)}a{color:var(--c)}
+</style></head><body>
+<div class="hd"><div class="lg"><svg width="22" height="22" viewBox="0 0 22 22"><circle cx="11" cy="11" r="9" fill="#ff4fb4"/><rect x="6" y="8" width="3" height="4" fill="#111"/><rect x="13" y="8" width="3" height="4" fill="#111"/></svg></div>
+<div><h1>GROKBOT + JEV</h1><div class="sub" id="hsub"></div></div><span class="paper" id="hpaper"></span>
+<nav id="roomnav"><a href="index.html" id="rn_office"></a><a href="trade.html" id="rn_trade"></a><a href="markets.html" id="rn_markets"></a><a href="race.html" id="rn_race"></a><a href="spider.html" class="on" id="rn_spider"></a><a href="safety.html" id="rn_safety"></a><button id="langBtn"></button></nav>
+<div class="sp"></div><div class="ttl" id="httl"></div></div>
+<div class="pn"><div class="ph"><span id="hstat"></span><b>prompt-spider-ui · MIT</b></div>
+<div style="margin-top:6px;font-size:13px"><span class="dot" id="dot" style="background:var(--y)"></span><span id="stat">—</span></div>
+<div class="mut" style="font-size:11.5px;margin-top:6px" id="hint"></div>
+<div id="tools"></div></div>
+<iframe id="stage" title="spider"></iframe>
+<script>
+const LANG=(()=>{try{const q=new URLSearchParams(location.search).get('lang');if(q==='en'||q==='zh')return q}catch(e){}try{return localStorage.getItem('office_lang')||'zh'}catch(e){return'zh'}})();
+const D={zh:{sub:'DEGEN 实验室 · SOLANA MEME 币 · 桌面精选',paper:'📄 PAPER · 虚拟资金',office:'办公室',trade:'交易台',markets:'行情',race:'赛跑',spider:'蜘蛛',safety:'安全',ttl:'机械蜘蛛工坊',stat:'舞台服务（本机 :4317）',on:'在线 — 舞台已接入下方',off:'离线 — 需先在本机启动蜘蛛服务（modules/spider，见仓内 README 的启动方式）',tools:'MCP 工具（modules/spider/mcp）'},
+en:{sub:'DEGEN LAB · SOLANA MEMECOINS · DESK PICKS',paper:'📄 PAPER · VIRTUAL MONEY',office:'Office',trade:'Trade Desk',markets:'Markets',race:'Race',spider:'Spider',safety:'Safety',ttl:'SPIDER WORKSHOP',stat:'Stage service (local :4317)',on:'Online — stage embedded below',off:'Offline — start the spider service first (modules/spider, see repo README)',tools:'MCP tools (modules/spider/mcp)'}};
+const T=D[LANG];document.documentElement.lang=LANG==='zh'?'zh-CN':'en';
+const $=i=>document.getElementById(i);
+$('hsub').textContent=T.sub;$('hpaper').textContent=T.paper;$('httl').textContent=T.ttl;$('hstat').textContent=T.stat;
+['office','trade','markets','race','spider','safety'].forEach(k=>$('rn_'+k).textContent=T[k]);
+$('langBtn').textContent=LANG==='zh'?'EN':'中文';$('langBtn').onclick=()=>{try{localStorage.setItem('office_lang',LANG==='zh'?'en':'zh')}catch(e){}location.href=location.pathname+'?lang='+(LANG==='zh'?'en':'zh')};
+const TOOLS=['spider_create_session','spider_configure_session','spider_get_session','spider_list_sessions','spider_control_playback','spider_update_events','spider_report_task','spider_export_session','spider_export_project','spider_import_session','spider_complete_session','spider_close_session'];
+$('tools').innerHTML='<div class="mut" style="font-size:11px;margin-top:8px">'+T.tools+'</div>'+TOOLS.map(t=>`<span class="chip">${t}</span>`).join('');
+async function probe(){try{const st=await (await fetch('/api/fusion/status')).json();const on=st.spider&&st.spider.online;
+ $('dot').style.background=on?'var(--g)':'var(--r)';$('stat').textContent=on?T.on:T.off;
+ if(on&&!$('stage').src)$('stage').src='http://127.0.0.1:4317/'}catch(e){$('stat').textContent=T.off}}
+probe();setInterval(probe,20000);
+</script></body></html>

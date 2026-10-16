@@ -1,0 +1,60 @@
+<!DOCTYPE html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>行情 · Markets</title>
+<style>
+:root{--pk:#ff4fb4;--card:#111116;--ln:#24242c;--txt:#ececf1;--mut:#8a8a99;--g:#3dff8f;--r:#ff4d5e;--y:#ffd23f;--c:#3fd5ff}
+*{box-sizing:border-box}html,body{margin:0}
+body{background:#e04aa6;background-image:linear-gradient(rgba(255,255,255,.05) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.05) 1px,transparent 1px);background-size:6px 6px;color:var(--txt);font-family:ui-monospace,'JetBrains Mono',Menlo,Consolas,monospace;padding:10px 12px}
+.hd{display:flex;align-items:center;gap:14px;margin-bottom:10px}
+.hd .lg{width:34px;height:34px;border-radius:8px;background:#111;display:grid;place-items:center}
+.hd h1{margin:0;font:900 26px/1 system-ui,sans-serif;color:#111}.hd .sub{font-size:11px;color:#2a0b1e;letter-spacing:1px}
+.paper{background:#111;color:var(--y);font-size:10px;font-weight:900;padding:3px 7px;border-radius:4px;letter-spacing:1px}
+#roomnav{display:flex;gap:4px;align-items:center;margin-left:10px}
+#roomnav a{color:#2a0b1e;text-decoration:none;font:800 12px ui-monospace,monospace;padding:4px 9px;border:2px solid #111;border-radius:5px;letter-spacing:1px}
+#roomnav a.on{background:#111;color:#ff4fb4}#roomnav a:hover{background:#111;color:#fff}
+#langBtn{background:#111;color:#ffd23f;border:2px solid #111;border-radius:5px;font:800 12px ui-monospace,monospace;padding:4px 9px;cursor:pointer}
+.hd .sp{flex:1}.hd .ttl{font:900 20px system-ui,sans-serif;color:#111}
+.pn{background:var(--card);border-radius:7px;padding:10px 12px;box-shadow:0 2px 0 rgba(0,0,0,.35)}
+.ph{display:flex;justify-content:space-between;font-size:11px;letter-spacing:1.5px;color:#d6d6e0;margin-bottom:6px}.ph b{color:var(--pk)}
+table{width:100%;border-collapse:collapse;font-size:12px}td,th{padding:4px 5px;text-align:left;white-space:nowrap}th{color:var(--mut);font-weight:500;border-bottom:1px solid var(--ln)}
+.pos{color:var(--g)}.neg{color:var(--r)}.mut{color:var(--mut)}
+.idx{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px;margin-bottom:8px}
+.idx .pn .v{font:900 20px ui-monospace,monospace}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:8px}.col{display:grid;gap:8px;align-content:start}
+.news div{padding:5px 0;border-bottom:1px dashed var(--ln);font-size:12px}.news small{color:var(--mut)}
+</style></head><body>
+<div class="hd"><div class="lg"><svg width="22" height="22" viewBox="0 0 22 22"><circle cx="11" cy="11" r="9" fill="#ff4fb4"/><rect x="6" y="8" width="3" height="4" fill="#111"/><rect x="13" y="8" width="3" height="4" fill="#111"/></svg></div>
+<div><h1>GROKBOT + JEV</h1><div class="sub" id="hsub"></div></div><span class="paper" id="hpaper"></span>
+<nav id="roomnav"><a href="index.html" id="rn_office"></a><a href="trade.html" id="rn_trade"></a><a href="markets.html" class="on" id="rn_markets"></a><a href="race.html" id="rn_race"></a><a href="spider.html" id="rn_spider"></a><a href="safety.html" id="rn_safety"></a><button id="langBtn"></button></nav>
+<div class="sp"></div><div class="ttl" id="httl"></div></div>
+<div class="idx" id="idx"></div>
+<div class="two">
+ <div class="col">
+  <div class="pn"><div class="ph"><span id="hwatch"></span><b>FinSight</b></div><table><thead><tr><th data-i="c_sym"></th><th data-i="c_name"></th><th data-i="c_px"></th><th data-i="c_chg"></th><th data-i="c_hl"></th></tr></thead><tbody id="watch"></tbody></table></div>
+  <div class="pn"><div class="ph"><span id="hpicks"></span><b>FinSight</b></div><div id="picks" class="mut" style="font-size:12px">—</div></div>
+ </div>
+ <div class="col">
+  <div class="pn"><div class="ph"><span id="hsec"></span><b data-i="sec_src"></b></div><table><thead><tr><th data-i="c_name"></th><th data-i="c_chg"></th></tr></thead><tbody id="sec"></tbody></table></div>
+  <div class="pn"><div class="ph"><span id="hnews"></span><b>FinSight</b></div><div class="news" id="news"><span class="mut">—</span></div></div>
+ </div>
+</div>
+<script>
+const LANG=(()=>{try{const q=new URLSearchParams(location.search).get('lang');if(q==='en'||q==='zh')return q}catch(e){}try{return localStorage.getItem('office_lang')||'zh'}catch(e){return'zh'}})();
+const D={zh:{sub:'DEGEN 实验室 · SOLANA MEME 币 · 桌面精选',paper:'📄 PAPER · 虚拟资金',office:'办公室',trade:'交易台',markets:'行情',race:'赛跑',spider:'蜘蛛',safety:'安全',ttl:'行情室',watch:'自选股',picks:'今日精选',sec:'热门板块',news:'市场快讯',sec_src:'东方财富',c_sym:'代码',c_name:'名称',c_px:'现价',c_chg:'涨跌',c_hl:'高 / 低',na:'沙箱内板块源受限时为空（部署机正常）'},
+en:{sub:'DEGEN LAB · SOLANA MEMECOINS · DESK PICKS',paper:'📄 PAPER · VIRTUAL MONEY',office:'Office',trade:'Trade Desk',markets:'Markets',race:'Race',spider:'Spider',safety:'Safety',ttl:'MARKETS',watch:'Watchlist',picks:'Daily picks',sec:'Hot sectors',news:'Market news',sec_src:'Eastmoney',c_sym:'Symbol',c_name:'Name',c_px:'Price',c_chg:'Change',c_hl:'High / Low',na:'empty when the sector source is blocked in sandbox'}};
+const T=D[LANG];document.documentElement.lang=LANG==='zh'?'zh-CN':'en';
+const $=i=>document.getElementById(i),esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const f2=(v,d=2)=>v==null||isNaN(v)?'—':(+v).toLocaleString(LANG==='zh'?'zh-CN':'en-US',{minimumFractionDigits:d,maximumFractionDigits:d});
+$('hsub').textContent=T.sub;$('hpaper').textContent=T.paper;$('httl').textContent=T.ttl;
+['office','trade','markets','race','spider','safety'].forEach(k=>$('rn_'+k).textContent=T[k]);
+$('langBtn').textContent=LANG==='zh'?'EN':'中文';$('langBtn').onclick=()=>{try{localStorage.setItem('office_lang',LANG==='zh'?'en':'zh')}catch(e){}location.href=location.pathname+'?lang='+(LANG==='zh'?'en':'zh')};
+document.querySelectorAll('[data-i]').forEach(e=>e.textContent=T[e.dataset.i]||e.dataset.i);
+$('hwatch').textContent=T.watch;$('hpicks').textContent=T.picks;$('hsec').textContent=T.sec;$('hnews').textContent=T.news;
+async function J(u){const r=await fetch(u);if(!r.ok)throw new Error(r.status);return r.json()}
+async function load(){try{const st=await J('/api/fusion/status');const ix=(st.finance&&st.finance.indices)||[];
+ $('idx').innerHTML=ix.map(i=>`<div class="pn"><div class="ph"><span>${esc(i.name)}</span></div><div class="v ${i.pct>=0?'pos':'neg'}">${f2(i.price)} <small style="font-size:12px">${i.pct>=0?'+':''}${f2(i.pct)}%</small></div></div>`).join('')||'<div class="pn mut">—</div>'}catch(e){}
+ try{const w=await J('/api/finance/watchlist');const syms=(w.items||[]).map(x=>x.symbol).join(',');const q=await J('/api/finance/quotes?symbols='+encodeURIComponent(syms));const by={};(q.items||[]).forEach(x=>by[x.symbol]=x);
+ $('watch').innerHTML=(w.items||[]).map(x=>{const v=by[x.symbol]||{};return`<tr><td>${esc(x.symbol)}</td><td>${esc(x.name)}</td><td>${f2(v.price)}</td><td class="${(v.change_pct||0)>=0?'pos':'neg'}">${v.change_pct==null?'—':(v.change_pct>=0?'+':'')+f2(v.change_pct)+'%'}</td><td class="mut">${f2(v.high)} / ${f2(v.low)}</td></tr>`}).join('')}catch(e){}
+ try{const s=await J('/api/finance/sectors?kind=concept&limit=10');const items=s.items||s.sectors||[];$('sec').innerHTML=items.map(x=>`<tr><td>${esc(x.name)}</td><td class="${(x.pct||x.change_pct||0)>=0?'pos':'neg'}">${f2(x.pct??x.change_pct)}%</td></tr>`).join('')||`<tr><td class="mut" colspan="2">${T.na}</td></tr>`}catch(e){$('sec').innerHTML=`<tr><td class="mut" colspan="2">${T.na}</td></tr>`}
+ try{const n=await J('/api/finance/news?limit=14');const items=n.items||n.news||[];$('news').innerHTML=items.map(x=>`<div>${esc(x.title||x.name||'')}<br><small>${esc(x.source||'')} ${esc(x.time||x.ts||'')}</small></div>`).join('')||'<span class="mut">—</span>'}catch(e){}
+ try{const p=await J('/api/finance/picks');const items=p.items||p.picks||[];$('picks').innerHTML=items.length?items.map(x=>`<div style="padding:4px 0;border-bottom:1px dashed var(--ln)"><b style="color:var(--txt)">${esc(x.symbol||'')}</b> ${esc(x.name||'')} <span class="${(x.score||0)>=0?'pos':'mut'}">${x.score!=null?'★ '+f2(x.score,1):''}</span><br><span class="mut">${esc(x.reason||(x.reasons||[]).slice(0,2).join('；')||'')}</span></div>`).join(''):'—'}catch(e){}}
+load();setInterval(load,30000);
+</script></body></html>

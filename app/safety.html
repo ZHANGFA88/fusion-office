@@ -1,0 +1,60 @@
+<!DOCTYPE html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>安全 · AI Safety</title>
+<style>
+:root{--pk:#ff4fb4;--card:#111116;--ln:#24242c;--txt:#ececf1;--mut:#8a8a99;--g:#3dff8f;--r:#ff4d5e;--y:#ffd23f;--c:#3fd5ff}
+*{box-sizing:border-box}html,body{margin:0}
+body{background:#e04aa6;background-image:linear-gradient(rgba(255,255,255,.05) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.05) 1px,transparent 1px);background-size:6px 6px;color:var(--txt);font-family:ui-monospace,'JetBrains Mono',Menlo,Consolas,monospace;padding:10px 12px}
+.hd{display:flex;align-items:center;gap:14px;margin-bottom:10px}
+.hd .lg{width:34px;height:34px;border-radius:8px;background:#111;display:grid;place-items:center}
+.hd h1{margin:0;font:900 26px/1 system-ui,sans-serif;color:#111}.hd .sub{font-size:11px;color:#2a0b1e;letter-spacing:1px}
+.paper{background:#111;color:var(--y);font-size:10px;font-weight:900;padding:3px 7px;border-radius:4px;letter-spacing:1px}
+#roomnav{display:flex;gap:4px;align-items:center;margin-left:10px}
+#roomnav a{color:#2a0b1e;text-decoration:none;font:800 12px ui-monospace,monospace;padding:4px 9px;border:2px solid #111;border-radius:5px;letter-spacing:1px}
+#roomnav a.on{background:#111;color:#ff4fb4}#roomnav a:hover{background:#111;color:#fff}
+#langBtn{background:#111;color:#ffd23f;border:2px solid #111;border-radius:5px;font:800 12px ui-monospace,monospace;padding:4px 9px;cursor:pointer}
+.hd .sp{flex:1}.hd .ttl{font:900 20px system-ui,sans-serif;color:#111}
+.pn{background:var(--card);border-radius:7px;padding:12px 14px;box-shadow:0 2px 0 rgba(0,0,0,.35)}
+.ph{display:flex;justify-content:space-between;font-size:11px;letter-spacing:1.5px;color:#d6d6e0;margin-bottom:6px}.ph b{color:var(--pk)}
+.two{display:grid;grid-template-columns:minmax(0,1.05fr) minmax(0,1fr);gap:8px;align-items:start}
+.md{font-size:13px;line-height:1.65;color:#d6d6e0}.md h1,.md h2,.md h3{color:var(--txt);font-family:system-ui,sans-serif}
+.md h1{font-size:19px}.md h2{font-size:16px;margin-top:16px}.md h3{font-size:14px}.md a{color:var(--c)}.md li{margin:3px 0}.md code{background:#0c0c10;padding:1px 5px;border-radius:3px}
+.pp{padding:9px 0;border-bottom:1px dashed var(--ln)}.pp .t{font:700 14px system-ui,sans-serif;color:var(--txt)}
+.pp .en{font-size:11.5px;color:var(--mut)}.pp .line{font-size:12.5px;color:#d6d6e0;margin-top:3px}
+.tag{display:inline-block;border:1px solid #4a2a3c;color:var(--pk);border-radius:3px;padding:0 5px;font-size:10px;margin:2px 3px 0 0}
+.pp a{color:var(--c);font-size:11.5px}.mut{color:var(--mut)}
+</style></head><body>
+<div class="hd"><div class="lg"><svg width="22" height="22" viewBox="0 0 22 22"><circle cx="11" cy="11" r="9" fill="#ff4fb4"/><rect x="6" y="8" width="3" height="4" fill="#111"/><rect x="13" y="8" width="3" height="4" fill="#111"/></svg></div>
+<div><h1>GROKBOT + JEV</h1><div class="sub" id="hsub"></div></div><span class="paper" id="hpaper"></span>
+<nav id="roomnav"><a href="index.html" id="rn_office"></a><a href="trade.html" id="rn_trade"></a><a href="markets.html" id="rn_markets"></a><a href="race.html" id="rn_race"></a><a href="spider.html" id="rn_spider"></a><a href="safety.html" class="on" id="rn_safety"></a><button id="langBtn"></button></nav>
+<div class="sp"></div><div class="ttl" id="httl"></div></div>
+<div class="two">
+ <div class="pn"><div class="ph"><span id="hbrief"></span><b>AISafetyHot-Hub</b></div><div class="md" id="brief">—</div>
+ <div class="mut" style="font-size:10.5px;margin-top:10px" id="cc"></div></div>
+ <div class="pn"><div class="ph"><span id="hpapers"></span><b id="pdate"></b></div><div id="papers">—</div></div>
+</div>
+<script>
+const LANG=(()=>{try{const q=new URLSearchParams(location.search).get('lang');if(q==='en'||q==='zh')return q}catch(e){}try{return localStorage.getItem('office_lang')||'zh'}catch(e){return'zh'}})();
+const D={zh:{sub:'DEGEN 实验室 · SOLANA MEME 币 · 桌面精选',paper:'📄 PAPER · 虚拟资金',office:'办公室',trade:'交易台',markets:'行情',race:'赛跑',spider:'蜘蛛',safety:'安全',ttl:'AI 安全情报室',brief:'每日简报',papers:'今日论文（30 篇）',cc:'来源：AISafetyHot-Hub（wuyoscar）· 文字内容 CC BY-NC 4.0 · 经本机服务同源代理读取',read:'原文'},
+en:{sub:'DEGEN LAB · SOLANA MEMECOINS · DESK PICKS',paper:'📄 PAPER · VIRTUAL MONEY',office:'Office',trade:'Trade Desk',markets:'Markets',race:'Race',spider:'Spider',safety:'Safety',ttl:'AI SAFETY INTEL',brief:'Daily briefing',papers:'Today papers (30)',cc:'Source: AISafetyHot-Hub (wuyoscar) · text CC BY-NC 4.0 · read via local same-origin proxy',read:'Paper'}};
+const T=D[LANG];document.documentElement.lang=LANG==='zh'?'zh-CN':'en';
+const $=i=>document.getElementById(i),esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+$('hsub').textContent=T.sub;$('hpaper').textContent=T.paper;$('httl').textContent=T.ttl;$('hbrief').textContent=T.brief;$('hpapers').textContent=T.papers;$('cc').textContent=T.cc;
+['office','trade','markets','race','spider','safety'].forEach(k=>$('rn_'+k).textContent=T[k]);
+$('langBtn').textContent=LANG==='zh'?'EN':'中文';$('langBtn').onclick=()=>{try{localStorage.setItem('office_lang',LANG==='zh'?'en':'zh')}catch(e){}location.href=location.pathname+'?lang='+(LANG==='zh'?'en':'zh')};
+function md2h(md){const L=md.split('\n');let h='',ul=false;const inl=s=>esc(s).replace(/\*\*([^*]+)\*\*/g,'<b>$1</b>').replace(/`([^`]+)`/g,'<code>$1</code>').replace(/\[([^\]]+)\]\((https?:[^)]+)\)/g,'<a href="$2" target="_blank" rel="noopener">$1</a>');
+ for(const raw of L){const s=raw.trim();if(/^---+$/.test(s)){if(ul){h+='</ul>';ul=false}continue}
+  if(s.startsWith('### ')){if(ul){h+='</ul>';ul=false}h+='<h3>'+inl(s.slice(4))+'</h3>'}
+  else if(s.startsWith('## ')){if(ul){h+='</ul>';ul=false}h+='<h2>'+inl(s.slice(3))+'</h2>'}
+  else if(s.startsWith('# ')){if(ul){h+='</ul>';ul=false}h+='<h1>'+inl(s.slice(2))+'</h1>'}
+  else if(/^[-*] /.test(s)){if(!ul){h+='<ul>';ul=true}h+='<li>'+inl(s.slice(2))+'</li>'}
+  else if(/^\d+\. /.test(s)){if(!ul){h+='<ul>';ul=true}h+='<li>'+inl(s.replace(/^\d+\. /,''))+'</li>'}
+  else if(s){if(ul){h+='</ul>';ul=false}h+='<p>'+inl(s)+'</p>'}}
+ if(ul)h+='</ul>';return h}
+async function J(u){const r=await fetch(u);if(!r.ok)throw new Error(r.status);return r}
+async function load(){let date=null;try{const st=await (await J('/api/fusion/status')).json();date=st.safety&&st.safety.latest}catch(e){}
+ if(!date){const t=new Date();date=t.toISOString().slice(0,10)}
+ $('pdate').textContent=date;const y=date.slice(0,4);
+ try{const md=await (await J('/api/fusion/safety-file?path='+encodeURIComponent(`daily/${y}/${date}.md`))).text();$('brief').innerHTML=md2h(md)}catch(e){$('brief').textContent='—'}
+ try{const pj=await (await J('/api/fusion/safety-file?path='+encodeURIComponent(`daily-papers/${y}/${date}.json`))).json();const items=Array.isArray(pj)?pj:(pj.items||pj.papers||[]);
+  $('papers').innerHTML=items.map(p=>`<div class="pp"><div class="t">${esc(LANG==='zh'?(p.titleZh||p.title||''):p.title||'')}</div>${LANG==='zh'&&p.title?`<div class="en">${esc(p.title)}</div>`:''}<div class="line">${esc(p.line||p.summary||'')}</div><div>${(p.topics||[]).map(t=>`<span class="tag">${esc(typeof t==='string'?t:(LANG==='zh'?(t.name||t.slug||''):(t.slug||t.name||'')))}</span>`).join('')}<span class="tag">${esc(p.venue||p.site||'')}</span></div><div class="mut" style="font-size:11px">${esc((p.authors||[]).slice(0,4).join(', '))} ${p.url?`· <a href="${esc(p.url)}" target="_blank" rel="noopener">${T.read}</a>`:''}</div></div>`).join('')||'—'}catch(e){$('papers').textContent='—'}}
+load();
+</script></body></html>
