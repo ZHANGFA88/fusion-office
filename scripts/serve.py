@@ -2681,8 +2681,13 @@ class Handler(SimpleHTTPRequestHandler):
             if path == '/api/trade/orders':
                 return self._api_trade_orders(q)
             if path == '/' :
-                # V2（仅路由层）：根路径给 fusion-office 办公室控制台（fusion-v2/app/index.html），FinSight 原页走 /finance
-                self.path = '/app/index.html'
+                # V2：根路径 302 跳到办公室页。不能只改写 self.path 原地出页——
+                # 浏览器停在 / 时，办公室内相对链接（trade.html 等）会解析到 /trade.html 全 404
+                # （2026-10-16 Mac 实机测试发现）。FinSight 原页走 /finance。
+                self.send_response(302)
+                self.send_header('Location', '/app/index.html')
+                self.end_headers()
+                return
             if path == '/finance' :
                 self.path = '/public/finance.html'
         except Exception as e:
