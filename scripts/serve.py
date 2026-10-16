@@ -605,6 +605,59 @@ def get_latest_from_db(symbols):
             out[r['symbol']] = dict(r)
     return out
 
+def fetch_us_cnbc(symbols):
+    """美股第三源：CNBC quote cache（腾讯/新浪未命中时用，排在 Yahoo 之前，2026-10-16 新增）。
+    返回与 fetch_tencent 相同形状；其缓存里 OHLC 常为 0，缺失时以现价回填避免假 0。
+    仅普通美股代码（.HK 等在此剔除）；BRK.B 类代码按 CNBC 口径转 BRK/B 查询。"""
+    import subprocess
+    syms = [s for s in symbols if not s.endswith('.HK')]
+    if not syms:
+        return {}
+    q = '|'.join(s.replace('.', '/') for s in syms)
+    url = ('https://quote.cnbc.com/quote-html-webservice/restQuote/symbolType/symbol'
+           '?symbols=%s&requestMethod=itv&noform=1&partnerId=2&fund=1&exthrs=1&output=json'
+           % urllib.parse.quote(q, safe='|/'))
+    out = {}
+    try:
+        _throttle_url(url)
+        raw = subprocess.run(['curl', '-s', '--max-time', '10', url,
+                              '-H', 'User-Agent: ' + UA],
+                             capture_output=True, timeout=13).stdout.decode('utf-8', 'ignore')
+        d = json.loads(raw)
+        rows = ((d.get('FormattedQuoteResult') or {}).get('FormattedQuote')) or []
+
+        def _f(v):
+            try:
+                return float(str(v or '0').replace(',', ''))
+            except ValueError:
+                return 0.0
+
+        by = {}
+        for row in rows:
+            by[(row.get('symbol') or '').replace('/', '.')] = row
+        for s in syms:
+            row = by.get(s)
+            if not row:
+                continue
+            price = _f(row.get('last'))
+            if price <= 0:
+                continue
+            chg = _f(row.get('change'))
+            prev = _f(row.get('previous_day_closing')) or (price - chg)
+            out[s] = {'symbol': s, 'name': row.get('name') or s, 'market': None,
+                      'price': round(price, 4),
+                      'change_pct': round(_f(str(row.get('change_pct') or '0').rstrip('%')), 2),
+                      'change_amt': round(chg, 4),
+                      'open': _f(row.get('open')) or price,
+                      'high': _f(row.get('high')) or price,
+                      'low': _f(row.get('low')) or price,
+                      'prev_close': round(prev, 4) if prev else 0,
+                      'volume': _f(row.get('volume'))}
+    except Exception:
+        pass
+    return out
+
+
 def fetch_quotes(symbols, fallback_db=True):
     """根据后缀分流到不同源；A股新浪主+东财备；失败用DB旧值兼底"""
     cn = [s for s in symbols if s.endswith('.SS') or s.endswith('.SZ')]
@@ -633,6 +686,10 @@ def fetch_quotes(symbols, fallback_db=True):
         sina_miss = [s for s in tencent_ok if s not in r]
         if sina_miss:
             r.update(fetch_sina_global(sina_miss))
+        # 美股再加 CNBC 三源（Yahoo 之前，2026-10-16 新增）
+        cnbc_miss = [s for s in tencent_ok if s not in r and not s.endswith('.HK')]
+        if cnbc_miss:
+            r.update(fetch_us_cnbc(cnbc_miss))
         # 仍缺的 + 加密外汇 → Yahoo兼底
         missing = [s for s in other if s not in r]
         if missing:
@@ -1277,7 +1334,41 @@ def fetch_news_global(limit=20):
         except Exception:
             pass
         time.sleep(1.0 * (attempt + 1))
-    return []
+    # 东财快讯两试仍空 → 新浪财经滚动新闻兜底（2026-10-16 新增第二源）
+    return fetch_news_sina_roll(limit)
+
+
+def fetch_news_sina_roll(limit=20):
+    """快讯第二源：新浪财经滚动新闻（feed.mix.sina.com.cn roll 接口）。
+    返回与 fetch_news_global 相同形状 [{title,url,time,ts}]。"""
+    import subprocess
+    url = ('https://feed.mix.sina.com.cn/api/roll/get?pageid=153&lid=2509&num=%d&page=1'
+           % max(1, int(limit)))
+    try:
+        _throttle_url(url)
+        raw = subprocess.run(['curl', '-s', '--max-time', '10', url,
+                              '-H', 'Referer: https://finance.sina.com.cn',
+                              '-H', 'User-Agent: ' + UA],
+                             capture_output=True, timeout=13).stdout.decode('utf-8', 'ignore')
+        d = json.loads(raw)
+        out = []
+        for it in ((d.get('result') or {}).get('data') or [])[:limit]:
+            title = (it.get('title') or '').strip()
+            if not title:
+                continue
+            try:
+                cts = int(it.get('ctime') or 0)
+            except (TypeError, ValueError):
+                cts = 0
+            out.append({
+                'title': title,
+                'url': it.get('url') or '',
+                'time': time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(cts)) if cts else '',
+                'ts': cts or int(time.time()),
+            })
+        return out
+    except Exception:
+        return []
 
 def fetch_news_stock(symbol, limit=8):
     """个股相关新闻(东财)。symbol 形如 600519.SS/000001.SZ。返回 [{title,url,time}]。"""
@@ -1341,7 +1432,44 @@ def fetch_sectors(kind='concept', limit=10):
         except Exception:
             pass
         time.sleep(1.2 * (attempt + 1))  # 退避重试
-    return out
+    # 东财三试仍空（被限流/地域受限时常见）→ 新浪板块兜底（2026-10-16 新增第二源）
+    return fetch_sectors_sina(kind=kind, limit=limit)
+
+
+def fetch_sectors_sina(kind='concept', limit=10):
+    """板块第二源：新浪行业/概念板块榜（GBK，字段为 CSV）。
+    行: code,name,成分股数,均价,涨跌额,涨跌幅%,成交量,成交额,领涨股代码,领涨幅,领涨价,领涨额,领涨股名。
+    无主力净流入/涨跌家数，相应字段置 None；按涨跌幅降序取前 limit。"""
+    import subprocess
+    if kind == 'concept':
+        url = 'http://vip.stock.finance.sina.com.cn/q/view/newFLJK.php?param=class'
+    else:
+        url = 'http://vip.stock.finance.sina.com.cn/q/view/newSinaHy.php'
+    try:
+        _throttle_url(url)
+        raw = subprocess.run(['curl', '-s', '--max-time', '10', url,
+                              '-H', 'Referer: https://finance.sina.com.cn',
+                              '-H', 'User-Agent: ' + UA],
+                             capture_output=True, timeout=13).stdout.decode('gbk', 'ignore')
+        m = raw.find('{')
+        if m < 0:
+            return []
+        d = json.loads(raw[m:raw.rfind('}') + 1])
+        rows = []
+        for code, csv in d.items():
+            f = (csv or '').split(',')
+            if len(f) < 6 or not f[1]:
+                continue
+            try:
+                pct = round(float(f[5]), 2)
+            except (TypeError, ValueError):
+                continue
+            rows.append({'code': code, 'name': f[1], 'change_pct': pct,
+                         'main_inflow': None, 'up_count': None, 'down_count': None})
+        rows.sort(key=lambda r: r['change_pct'], reverse=True)
+        return rows[:limit]
+    except Exception:
+        return []
 
 def _movers_eastmoney(limit):
     """主源: 东财 clist 全市场A股涨幅榜"""
@@ -2842,7 +2970,13 @@ class Handler(SimpleHTTPRequestHandler):
         if kind not in ('concept', 'industry'):
             kind = 'concept'
         data = _sector_cache_get(kind=kind)
-        return self._json(200, {'ok': True, 'kind': kind, 'items': data, 'ts': int(time.time())})
+        # 来源标注：新浪兜底的行 code 以 gn_/new_ 开头，东财为 BK 代码
+        source = None
+        if data:
+            code0 = str(data[0].get('code') or '')
+            source = 'sina' if code0.startswith(('gn_', 'new_')) else 'eastmoney'
+        return self._json(200, {'ok': True, 'kind': kind, 'source': source,
+                                'items': data, 'ts': int(time.time())})
 
     def _api_news(self, q):
         """财经新闻。symbol 有值→个股相关新闻; 否则全局快讯。均带缓存"""
