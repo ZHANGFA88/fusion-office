@@ -26,6 +26,10 @@ body{background:#e04aa6;background-image:linear-gradient(rgba(255,255,255,.05) 1
 <div><h1>GROKBOT + JEV</h1><div class="sub" id="hsub"></div></div><span class="paper" id="hpaper"></span>
 <nav id="roomnav"><a href="index.html" id="rn_office"></a><a href="trade.html" id="rn_trade"></a><a href="markets.html" id="rn_markets"></a><a href="race.html" id="rn_race"></a><a href="spider.html" id="rn_spider"></a><a href="safety.html" class="on" id="rn_safety"></a><button id="langBtn"></button></nav>
 <div class="sp"></div><div class="ttl" id="httl"></div></div>
+<div class="pn" style="margin-bottom:12px"><div class="ph"><span id="hhot"></span><b id="hotstat">…</b><a id="hotopen" href="http://localhost:3000" target="_blank" rel="noopener" style="margin-left:auto;color:#ff4fb4;font-size:11px"></a></div>
+<iframe id="hotframe" src="http://localhost:3000" style="width:100%;height:74vh;border:2px solid #111;border-radius:8px;background:#fff" title="shikuang"></iframe>
+<div class="mut" id="hothow" style="display:none;font-size:11.5px;margin-top:8px"></div></div>
+<div class="ph" style="margin:2px 0 8px"><span id="harch"></span></div>
 <div class="two">
  <div class="pn"><div class="ph"><span id="hbrief"></span><b>AISafetyHot-Hub</b></div><div class="md" id="brief">—</div>
  <div class="mut" style="font-size:10.5px;margin-top:10px" id="cc"></div></div>
@@ -33,10 +37,11 @@ body{background:#e04aa6;background-image:linear-gradient(rgba(255,255,255,.05) 1
 </div>
 <script>
 const LANG=(()=>{try{const q=new URLSearchParams(location.search).get('lang');if(q==='en'||q==='zh')return q}catch(e){}try{return localStorage.getItem('office_lang')||'zh'}catch(e){return'zh'}})();
-const D={zh:{sub:'DEGEN 实验室 · SOLANA MEME 币 · 桌面精选',paper:'📄 PAPER · 虚拟资金',office:'办公室',trade:'交易台',markets:'行情',race:'赛跑',spider:'蜘蛛',safety:'安全',ttl:'AI 安全情报室',brief:'每日简报',papers:'今日论文（30 篇）',cc:'来源：AISafetyHot-Hub（wuyoscar）· 文字内容 CC BY-NC 4.0 · 经本机服务同源代理读取',read:'原文'},
-en:{sub:'DEGEN LAB · SOLANA MEMECOINS · DESK PICKS',paper:'📄 PAPER · VIRTUAL MONEY',office:'Office',trade:'Trade Desk',markets:'Markets',race:'Race',spider:'Spider',safety:'Safety',ttl:'AI SAFETY INTEL',brief:'Daily briefing',papers:'Today papers (30)',cc:'Source: AISafetyHot-Hub (wuyoscar) · text CC BY-NC 4.0 · read via local same-origin proxy',read:'Paper'}};
+const D={zh:{sub:'DEGEN 实验室 · SOLANA MEME 币 · 桌面精选',paper:'📄 PAPER · 虚拟资金',office:'办公室',trade:'交易台',markets:'行情',race:'赛跑',spider:'蜘蛛',safety:'安全',ttl:'每日情报 · 市况台',hot:'市况台 · 政策与市场精选',hotOn:'● 运行中',hotOff:'○ 未启动',hotOpen:'新窗口打开 →',hotHow:'市况台还没启动：克隆 ZHANGFA88/shikuang，填好模型 Key（GPT / Gemini / 千问 / DeepSeek 任选）后 docker compose up -d --build，它就会出现在这里。下面的本地安全存档仍可读。',arch:'AI 安全存档（本地 AISafetyHot-Hub）',brief:'每日简报',papers:'今日论文（30 篇）',cc:'来源：AISafetyHot-Hub（wuyoscar）· 文字内容 CC BY-NC 4.0 · 经本机服务同源代理读取',read:'原文'},
+en:{sub:'DEGEN LAB · SOLANA MEMECOINS · DESK PICKS',paper:'📄 PAPER · VIRTUAL MONEY',office:'Office',trade:'Trade Desk',markets:'Markets',race:'Race',spider:'Spider',safety:'Safety',ttl:'DAILY INTEL · SHIKUANG',hot:'Shikuang · Policy & Market Picks',hotOn:'● Running',hotOff:'○ Not started',hotOpen:'Open in new tab →',hotHow:'Shikuang is not running yet: clone ZHANGFA88/shikuang, add a model key (GPT / Gemini / Qwen / DeepSeek), then docker compose up -d --build. The local safety archive below still works.',arch:'AI Safety Archive (local AISafetyHot-Hub)',brief:'Daily briefing',papers:'Today papers (30)',cc:'Source: AISafetyHot-Hub (wuyoscar) · text CC BY-NC 4.0 · read via local same-origin proxy',read:'Paper'}};
 const T=D[LANG];document.documentElement.lang=LANG==='zh'?'zh-CN':'en';
 const $=i=>document.getElementById(i),esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+$('hhot').textContent=T.hot;$('hotopen').textContent=T.hotOpen;$('hothow').textContent=T.hotHow;$('harch').textContent=T.arch;
 $('hsub').textContent=T.sub;$('hpaper').textContent=T.paper;$('httl').textContent=T.ttl;$('hbrief').textContent=T.brief;$('hpapers').textContent=T.papers;$('cc').textContent=T.cc;
 ['office','trade','markets','race','spider','safety'].forEach(k=>$('rn_'+k).textContent=T[k]);
 $('langBtn').textContent=LANG==='zh'?'EN':'中文';$('langBtn').onclick=()=>{try{localStorage.setItem('office_lang',LANG==='zh'?'en':'zh')}catch(e){}location.href=location.pathname+'?lang='+(LANG==='zh'?'en':'zh')};
@@ -57,4 +62,6 @@ async function load(){let date=null;try{const st=await (await J('/api/fusion/sta
  try{const pj=await (await J('/api/fusion/safety-file?path='+encodeURIComponent(`daily-papers/${y}/${date}.json`))).json();const items=Array.isArray(pj)?pj:(pj.items||pj.papers||[]);
   $('papers').innerHTML=items.map(p=>`<div class="pp"><div class="t">${esc(LANG==='zh'?(p.titleZh||p.title||''):p.title||'')}</div>${LANG==='zh'&&p.title?`<div class="en">${esc(p.title)}</div>`:''}<div class="line">${esc(p.line||p.summary||'')}</div><div>${(p.topics||[]).map(t=>`<span class="tag">${esc(typeof t==='string'?t:(LANG==='zh'?(t.name||t.slug||''):(t.slug||t.name||'')))}</span>`).join('')}<span class="tag">${esc(p.venue||p.site||'')}</span></div><div class="mut" style="font-size:11px">${esc((p.authors||[]).slice(0,4).join(', '))} ${p.url?`· <a href="${esc(p.url)}" target="_blank" rel="noopener">${T.read}</a>`:''}</div></div>`).join('')||'—'}catch(e){$('papers').textContent='—'}}
 load();
+async function probeHot(){const st=$('hotstat');try{const c=new AbortController();setTimeout(()=>c.abort(),3000);await fetch('http://localhost:3000/',{mode:'no-cors',signal:c.signal});st.textContent=T.hotOn;$('hotframe').style.display='block';$('hothow').style.display='none'}catch(e){st.textContent=T.hotOff;$('hotframe').style.display='none';$('hothow').style.display='block'}}
+probeHot();setInterval(probeHot,30000);
 </script></body></html>
