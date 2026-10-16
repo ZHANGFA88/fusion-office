@@ -2270,6 +2270,23 @@ def _safety_file_get(rel):
 # BrokerGateway = 真实券商接入留口（未接入，place/cancel/list 抛 NotImplementedError）。
 # 持久化：data/paper.db（SQLite），与 FinSight 的 finance.db 分离。
 PAPER_DB_PATH = os.path.join(DATA_DIR, 'paper.db')
+
+# ---- AI 炒股小队（ai_crew.py 引擎进程读写；serve 只做配置写入与状态透传） ----
+AI_CONFIG_PATH = os.path.join(DATA_DIR, 'ai-config.json')
+AI_STATUS_PATH = os.path.join(DATA_DIR, 'ai-status.json')
+AI_DEFAULT_CONFIG = {'enabled': False, 'profile': 'balanced', 'cycle_min': 10}
+
+
+def _ai_read_config():
+    try:
+        with open(AI_CONFIG_PATH, encoding='utf-8') as f:
+            cfg = json.load(f)
+    except Exception:
+        cfg = {}
+    out = dict(AI_DEFAULT_CONFIG)
+    if isinstance(cfg, dict):
+        out.update({k: cfg[k] for k in AI_DEFAULT_CONFIG if k in cfg})
+    return out
 TRADE_MARKETS = {
     'CN': {'currency': 'CNY', 'name': 'A股'},
     'HK': {'currency': 'HKD', 'name': '港股'},
@@ -2516,7 +2533,9 @@ def _paper_place(order):
         if otype == 'market':
             price = float(quote['price'])
             name = quote.get('name') or symbol
-            note = 'stale_price' if stale else None
+            base_note = (order.get('note') or '').strip()[:200]
+            note = ((base_note + ' · stale_price') if stale and base_note else
+                    'stale_price' if stale else base_note) or None
             _paper_validate_funds_position(c, market, symbol, side, qty, price)
             fee = _trade_execute_fill(c, market, symbol, name, side, qty, price)
             oid = c.execute("""INSERT INTO orders(ts,market,symbol,name,side,qty,type,limit_price,
@@ -2530,12 +2549,14 @@ def _paper_place(order):
         # 限价单：挂单。买入按限价预估费用验现金，卖出验可卖量
         est_fee = _trade_fee(market, side, limit_price * qty)
         _paper_validate_funds_position(c, market, symbol, side, qty, limit_price, fee=est_fee)
+        base_note = (order.get('note') or '').strip()[:200]
         oid = c.execute("""INSERT INTO orders(ts,market,symbol,name,side,qty,type,limit_price,
                                              status,fill_price,fee,note)
                          VALUES(?,?,?,?,?,?,?,?,?,?,?,?)""",
                       (now, market, symbol, symbol, side, qty, 'limit', limit_price,
-                       'open', None, None, None)).lastrowid
-        return {'id': oid, 'status': 'open', 'limit_price': limit_price}
+                       'open', None, None, base_note or None)).lastrowid
+        return {'id': oid, 'status': 'open', 'limit_price': limit_price,
+                'note': base_note or None}
 
 def _paper_cancel(order_id):
     """PaperGateway.cancel 实现：仅 open 挂单可撤。"""
@@ -2592,7 +2613,9 @@ def _paper_sweep():
             name = q.get('name') or o['symbol']
             fee = _trade_execute_fill(c, o['market'], o['symbol'], name, o['side'], o['qty'], price)
             now = int(time.time())
-            note = 'stale_price' if q.get('stale') else None
+            note = o.get('note')
+            if q.get('stale'):
+                note = (note + ' · stale_price') if note else 'stale_price'
             c.execute("UPDATE orders SET status='filled', fill_price=?, fee=?, name=?, note=? WHERE id=?",
                       (price, fee, name, note, o['id']))
             c.execute("INSERT INTO fills(order_id,ts,price,qty,fee) VALUES(?,?,?,?,?)",
@@ -2767,6 +2790,8 @@ class Handler(SimpleHTTPRequestHandler):
                 return self._api_race_engine(q)
             if path == '/api/race/meta':
                 return self._api_race_meta(q)
+            if path == '/api/ai/status':
+                return self._api_ai_status(q)
             if path == '/api/trade/account':
                 return self._api_trade_account(q)
             if path == '/api/trade/positions':
@@ -2806,6 +2831,8 @@ class Handler(SimpleHTTPRequestHandler):
                 return self._api_trade_order(data)
             if path == '/api/trade/cancel':
                 return self._api_trade_cancel(data)
+            if path == '/api/ai/config':
+                return self._api_ai_config(data)
             if path == '/api/trade/reset':
                 return self._api_trade_reset(data)
         except Exception as e:
@@ -2996,6 +3023,41 @@ class Handler(SimpleHTTPRequestHandler):
         """/api/trade/positions：持仓明细（现价、未实现盈亏、可卖股数）"""
         return self._json(200, _trade_positions_view())
 
+    def _api_ai_status(self, q):
+        """/api/ai/status：AI 小队配置 + 引擎状态（心跳新鲜度判活）"""
+        cfg = _ai_read_config()
+        try:
+            with open(AI_STATUS_PATH, encoding='utf-8') as f:
+                st = json.load(f)
+        except Exception:
+            st = {}
+        age = (int(time.time()) - int(st.get('ts') or 0)) if st else None
+        return self._json(200, {'ok': True, 'config': cfg, 'status': st,
+                                'running': bool(st) and age is not None and age < 90})
+
+    def _api_ai_config(self, data):
+        """/api/ai/config：写小队配置 {enabled?, profile?, cycle_min?}，引擎轮询生效"""
+        cfg = _ai_read_config()
+        if 'enabled' in data:
+            cfg['enabled'] = bool(data['enabled'])
+        if 'profile' in data:
+            if data['profile'] not in ('conservative', 'balanced', 'aggressive'):
+                return self._json(400, {'ok': False, 'error': 'profile 非法'})
+            cfg['profile'] = data['profile']
+        if 'cycle_min' in data:
+            try:
+                cm = int(data['cycle_min'])
+            except (TypeError, ValueError):
+                cm = 0
+            if cm < 1 or cm > 240:
+                return self._json(400, {'ok': False, 'error': 'cycle_min 须为 1-240'})
+            cfg['cycle_min'] = cm
+        tmp = AI_CONFIG_PATH + '.tmp'
+        with open(tmp, 'w', encoding='utf-8') as f:
+            json.dump(cfg, f, ensure_ascii=False)
+        os.replace(tmp, AI_CONFIG_PATH)
+        return self._json(200, {'ok': True, 'config': cfg})
+
     def _api_trade_orders(self, q):
         """/api/trade/orders：最近工单（默认100条）。读取时先触发限价单撮合"""
         _paper_sweep()
@@ -3049,8 +3111,10 @@ class Handler(SimpleHTTPRequestHandler):
                 if not limit_price or limit_price <= 0:
                     return self._json(400, {'ok': False, 'code': 'bad_price',
                                            'error': '限价单须带 price>0'})
+            note = str(data.get('note') or '').strip()[:200]
             res = TRADE_GATEWAY.place({'market': market, 'symbol': symbol, 'side': side,
-                                       'qty': qty, 'type': otype, 'price': limit_price})
+                                       'qty': qty, 'type': otype, 'price': limit_price,
+                                       'note': note})
             return self._json(200, dict({'ok': True}, **res, ts=int(time.time())))
         except TradeError as e:
             return self._json(400, {'ok': False, 'code': e.code, 'error': e.msg})
