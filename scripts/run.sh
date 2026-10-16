@@ -7,5 +7,9 @@ if [ "$1" != "--no-spider" ]; then
   (FINANCE_PORT="$PORT" nohup node scripts/spider_news_feeder.mjs > /tmp/fusion-office-spider.log 2>&1 &) || true
   echo "spider news feeder → live session via /api/fusion/spider-live (log: /tmp/fusion-office-spider.log)"
 fi
+if [ "$1" != "--no-ai" ]; then
+  (FINANCE_PORT="$PORT" nohup python3 scripts/ai_crew.py > /tmp/fusion-office-ai.log 2>&1 &) || true
+  echo "ai trading crew → enable it in the Trade Desk (log: /tmp/fusion-office-ai.log)"
+fi
 echo "fusion office → http://127.0.0.1:${PORT}"
 FINANCE_PORT="$PORT" python3 scripts/serve.py

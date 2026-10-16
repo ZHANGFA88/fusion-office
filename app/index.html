@@ -49,7 +49,7 @@ table{width:100%;border-collapse:collapse;font-size:10px}td,th{padding:2px 4px;t
 .code{overflow:hidden}.th{flex:1;min-height:0;display:grid;grid-template-columns:minmax(0,1.25fr) minmax(0,1fr);gap:6px;padding-bottom:26px}#spd{width:100%!important;height:100%!important;min-height:0}
 .code{font-size:clamp(9.5px,.6vw,12px);line-height:1.45}.code .rw{grid-template-columns:minmax(0,1.9fr) minmax(0,.8fr) minmax(0,.8fr) 14px}.code .rw span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 table{font-size:clamp(9.5px,.58vw,12px)}.ph{font-size:clamp(10px,.62vw,12.5px)}
-</style><style>#roomnav{display:flex;gap:4px;align-items:center;margin-left:10px}#roomnav a{color:#2a0b1e;text-decoration:none;font:800 12px ui-monospace,monospace;padding:4px 9px;border:2px solid #111;border-radius:5px;letter-spacing:1px}#roomnav a.on{background:#111;color:#ff4fb4}#roomnav a:hover{background:#111;color:#fff}#langBtn{background:#111;color:#ffd23f;border:2px solid #111;border-radius:5px;font:800 12px ui-monospace,monospace;padding:4px 9px;cursor:pointer;letter-spacing:1px}#stockchip{position:absolute;left:10px;bottom:10px;z-index:5;background:rgba(10,10,16,.92);border:2px solid #3dff8f;border-radius:7px;color:#ececf1;font:700 12px/1.5 ui-monospace,monospace;padding:7px 11px;max-width:72%;box-shadow:0 2px 0 rgba(0,0,0,.35)}#stockchip b{color:#3dff8f}#stockchip .mut{color:#8a8a99}</style><script>
+</style><style>#roomnav{display:flex;gap:4px;align-items:center;margin-left:10px}#roomnav a{color:#2a0b1e;text-decoration:none;font:800 12px ui-monospace,monospace;padding:4px 9px;border:2px solid #111;border-radius:5px;letter-spacing:1px}#roomnav a.on{background:#111;color:#ff4fb4}#roomnav a:hover{background:#111;color:#fff}#langBtn{background:#111;color:#ffd23f;border:2px solid #111;border-radius:5px;font:800 12px ui-monospace,monospace;padding:4px 9px;cursor:pointer;letter-spacing:1px}#stockchip{position:absolute;left:10px;bottom:10px;z-index:5;background:rgba(10,10,16,.92);border:2px solid #3dff8f;border-radius:7px;color:#ececf1;font:700 12px/1.5 ui-monospace,monospace;padding:7px 11px;max-width:72%;box-shadow:0 2px 0 rgba(0,0,0,.35)}#stockchip b{color:#3dff8f}#stockchip .mut{color:#8a8a99}#aichip{position:absolute;right:10px;bottom:10px;z-index:5;background:rgba(10,10,16,.92);border:2px solid #ff4fb4;border-radius:7px;color:#ececf1;font:700 12px/1.55 ui-monospace,monospace;padding:7px 11px;max-width:47%;box-shadow:0 2px 0 rgba(0,0,0,.35);cursor:pointer}#aichip b{color:#ff4fb4}#aichip .mut{color:#8a8a99}</style><script>
 /* 内联自 assets/i18n.js（沙箱浏览器不执行本地外链脚本，故内联；改词条须两处同步） */
 /* Fusion Office 双语包 + 葡语日志模板翻译层
  * 界面字符串：I18N[lang]；数据日志：trLog(msg, lang) 按引擎固定句式翻译，未覆盖回退原文并加标记。 */
@@ -145,7 +145,7 @@ window.I18N=I18N;window.trLog=trLog;
 <div><h1>GROKBOT + JEV</h1><div class="sub" id="hsub">DEGEN 实验室 · SOLANA MEME 币 · 桌面精选</div></div><span class="paper" id="hpaper">📄 PAPER · 虚拟资金</span><nav id="roomnav"><a href="index.html" class="on" id="rn_office">办公室</a><a href="trade.html" id="rn_trade">交易台</a><a href="markets.html" id="rn_markets">行情</a><a href="race.html" id="rn_race">赛跑</a><a href="spider.html" id="rn_spider">蜘蛛</a><a href="safety.html" id="rn_safety">安全</a><button id="langBtn">EN</button></nav>
 <div class="sp"></div><div class="day" id="day">—</div><div class="day" id="live">—</div><div class="clk" id="clk">--:-- PT</div></div>
 <div class="cards" id="cardsL"></div>
-<div id="ofr"><div id="owrap"><img id="obg" src="/app/assets/office-bg.jpg" alt="Escritório DEGEN LAB"><canvas id="oc" width="2048" height="1152"></canvas><div id="stockchip"></div></div></div>
+<div id="ofr"><div id="owrap"><img id="obg" src="/app/assets/office-bg.jpg" alt="Escritório DEGEN LAB"><canvas id="oc" width="2048" height="1152"></canvas><div id="stockchip"></div><div id="aichip"></div></div></div>
 <div class="cards" id="cardsR"></div>
 <div id="bot3">
 <div class="pn"><div class="ph"><span><span id="hSaldo">余额</span> · <span id="bday">—</span> · PAPER</span><b id="bstat">—</b></div><canvas id="bal" width="1000" height="300"></canvas></div>
@@ -344,5 +344,10 @@ applyStatic();
 const CSYM={CNY:'¥',HKD:'HK$',USD:'$'};
 async function stockTick(){const el=$('stockchip');if(!el)return;try{const a=await(await fetch('/api/trade/account')).json();const o=await(await fetch('/api/trade/orders')).json();const eq=(a.accounts||[]).map(x=>(CSYM[x.currency]||'')+f2(x.equity,0)).join(' · ');const os=o.orders||[];const last=os.find(x=>x.status==='filled')||os[0];el.innerHTML='<b>📈 '+(TI.stocks||'STOCKS')+'</b> · '+(TI.stocks_paper||'PAPER')+'<br>'+eq+(last?'<br><span class="mut">'+(TI.stocks_last||'last')+':</span> '+(last.side==='buy'?(LANG==='zh'?'买':'BUY'):(LANG==='zh'?'卖':'SELL'))+' '+esc(last.symbol)+' ×'+last.qty+(last.fill_price?' @'+last.fill_price:''):'<br><span class="mut">'+(TI.stocks_none||'—')+'</span>')}catch(e){el.style.display='none'}}
 stockTick();setInterval(stockTick,20000);
+async function aiTick(){const el=$('aichip');if(!el)return;try{const d=await(await fetch('/api/ai/status')).json();const cfg=d.config||{},st=d.status||{};const evs=st.events||[];const last=evs[evs.length-1];
+const head='<b>🤖 '+(LANG==='zh'?'AI 炒股小队':'AI CREW')+'</b> · '+(cfg.enabled?(d.running?(LANG==='zh'?'运行中':'LIVE'):(LANG==='zh'?'引擎未运行':'ENGINE OFF')):(LANG==='zh'?'未启用':'OFF'));
+el.innerHTML=head+(last?'<br><span style="color:#ffd23f">'+esc(last.persona)+'</span> '+esc(String(last.text).slice(0,66)):'<br><span class="mut">'+(LANG==='zh'?'去交易台开启 →':'enable in Trade Desk →')+'</span>');
+el.onclick=()=>location.href='trade.html';}catch(e){el.style.display='none'}}
+aiTick();setInterval(aiTick,20000);
 })();
 </script></body></html>

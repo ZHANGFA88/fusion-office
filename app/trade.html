@@ -50,6 +50,20 @@ label{font-size:10px;color:var(--mut);letter-spacing:1px;display:block;margin:8p
 .nws{font-size:12px;padding:5px 0;border-bottom:1px dashed var(--ln)}
 .nws a{color:var(--txt);text-decoration:none}.nws a:hover{color:var(--pk)}
 .nws .tm{color:var(--mut);font-size:10.5px;margin-right:7px}
+.ai-grid{display:grid;grid-template-columns:minmax(0,1.5fr) minmax(0,1fr);gap:10px}
+.ai-feed{max-height:270px;overflow:auto;font-size:12px}
+.ai-ev{padding:5px 0;border-bottom:1px dashed var(--ln);display:flex;gap:8px;align-items:flex-start}
+.ai-ev .tm{color:var(--mut);font-size:10.5px;white-space:nowrap;padding-top:1px}
+.pchip2{border-radius:4px;padding:1px 6px;font-size:10px;font-weight:900;letter-spacing:.5px;white-space:nowrap;color:#000}
+.ai-crew{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.ai-mem{background:#0c0c10;border:1px solid var(--ln);border-radius:5px;padding:6px 8px}
+.ai-mem .nm{font-size:11.5px;font-weight:900;letter-spacing:.5px}
+.ai-mem .rl{font-size:10px;color:var(--mut)}
+.ai-mem .la{font-size:10.5px;color:#c9c9d4;margin-top:3px;line-height:1.45}
+.ai-ctl{display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-bottom:8px}
+.seg{display:inline-flex;border:1px solid #4a2a3c;border-radius:5px;overflow:hidden}
+.seg button{background:#0c0c10;color:var(--mut);border:0;font:700 11.5px ui-monospace,monospace;padding:5px 11px;cursor:pointer}
+.seg button.on{background:var(--pk);color:#000}
 #swrap{padding:8px 10px;margin-bottom:8px;position:relative}
 #sres{position:absolute;left:10px;right:10px;top:calc(100% - 2px);background:#17171e;border:1px solid #4a2a3c;border-radius:6px;z-index:6;display:none;max-height:330px;overflow:auto;box-shadow:0 8px 24px rgba(0,0,0,.5)}
 .srow{padding:7px 10px;font-size:12.5px;cursor:pointer;display:flex;gap:10px;align-items:center;border-bottom:1px dashed var(--ln)}
@@ -89,6 +103,12 @@ label{font-size:10px;color:var(--mut);letter-spacing:1px;display:block;margin:8p
   <div class="pn"><div class="ph"><span id="hnews"></span><b>FinSight</b></div><div id="news"><span class="mut">…</span></div></div>
  </div>
 </div>
+<div class="pn" style="margin-top:8px"><div class="ph"><span id="hai"></span><b id="aistate">…</b></div>
+<div class="ai-ctl"><button class="btn big" id="aiToggle" style="width:auto;padding:7px 18px"></button>
+<span class="seg" id="aiProf"><button data-p="conservative"></button><button data-p="balanced"></button><button data-p="aggressive"></button></span>
+<select id="aiCycle" style="width:auto"><option value="5">5</option><option value="10">10</option><option value="30">30</option><option value="60">60</option></select><span class="mut" style="font-size:11px" id="aicyc"></span>
+<span class="mut" style="font-size:10.5px" id="ainote"></span></div>
+<div class="ai-grid"><div class="ai-feed" id="aifeed"><span class="mut">…</span></div><div class="ai-crew" id="aicrew"></div></div></div>
 <div id="toast"></div>
 <script>
 const LANG=(()=>{try{const q=new URLSearchParams(location.search).get('lang');if(q==='en'||q==='zh')return q}catch(e){}try{return localStorage.getItem('office_lang')||'zh'}catch(e){return'zh'}})();
@@ -98,14 +118,14 @@ const D={zh:{sub:'DEGEN 实验室 · SOLANA MEME 币 · 桌面精选',paper:'�
  c_mkt:'市场',c_sym:'代码',c_qty:'数量',c_sell:'可卖',c_cost:'成本',c_px:'现价',c_mv:'市值',c_share:'占比',c_pnl:'盈亏',c_time:'时间',c_side:'方向',c_fill:'成交价',c_fee:'费用',c_st:'状态',
  fees:'模拟费率',rules:'模拟规则：A股买入 100 股整数手、T+1 当日买入不可卖；市价单按最新报价成交；限价单挂单等触发。真实下单通道已留口、未接入。',
  est:'预估金额',estfee:'预估费用',filled:'已成交',open:'挂单中',cancelled:'已撤销',cancel:'撤单',none:'暂无',ok:'工单 #',fail:'下单失败',stale:'旧价',
- pd:'日K',pw:'周K',pm:'月K',searchPh:'🔍 搜股票买入：名称 / 代码 / 拼音（如 比亚迪、腾讯、nvda、00700）',noRes:'没找到，换个关键词试试',half:'半仓',all:'全仓',rsiOb:'超买',rsiOs:'超卖',rsiN:'中性',gold:'金叉',dead:'死叉',up:'多头',dn:'空头'},
+ pd:'日K',pw:'周K',pm:'月K',searchPh:'🔍 搜股票买入：名称 / 代码 / 拼音（如 比亚迪、腾讯、nvda、00700）',noRes:'没找到，换个关键词试试',hai:'🤖 AI 炒股小队（办公室八人格）',aiOn:'⏸ 停用小队',aiOff:'▶ 启用小队',aiMin:'分钟/轮',aiNote:'只操作模拟盘：股票池=自选+精选，规则评分+风控闸门，每笔单都带理由（见工单备注）',aiOffState:'未启用',aiNoEng:'引擎未运行（用 run.sh 启动后生效）',aiRun:'运行中',aiRound:'第',aiRound2:'轮',aiNext:'下轮',prof_cons:'保守',prof_bal:'平衡',prof_aggr:'激进',half:'半仓',all:'全仓',rsiOb:'超买',rsiOs:'超卖',rsiN:'中性',gold:'金叉',dead:'死叉',up:'多头',dn:'空头'},
 en:{sub:'DEGEN LAB · SOLANA MEMECOINS · DESK PICKS',paper:'📄 PAPER · VIRTUAL MONEY',office:'Office',trade:'Trade Desk',markets:'Markets',race:'Race',spider:'Spider',safety:'Safety',ttl:'STOCK DESK · PAPER',
  cash:'Cash',eq:'Equity',pv:'Positions value',pos:'Positions',ord:'New order',ords:'Orders (recent)',reset:'Reset paper account',news:'Latest news',
  f_mkt:'Market',f_sym:'Symbol',f_side:'Side',f_type:'Type',f_price:'Limit price',f_qty:'Quantity',buy:'BUY',sell:'SELL',market:'Market',limit:'Limit',submit:'Place order',
  c_mkt:'Market',c_sym:'Symbol',c_qty:'Qty',c_sell:'Sellable',c_cost:'Cost',c_px:'Price',c_mv:'Value',c_share:'Share',c_pnl:'P&L',c_time:'Time',c_side:'Side',c_fill:'Fill',c_fee:'Fee',c_st:'Status',
  fees:'paper fees',rules:'Paper rules: A-shares buy in 100-share lots, T+1 (same-day buys not sellable); market orders fill at latest quote; limit orders rest until triggered. Real broker gateway is stubbed, not connected.',
  est:'Est. amount',estfee:'Est. fee',filled:'filled',open:'open',cancelled:'cancelled',cancel:'cancel',none:'none yet',ok:'Order #',fail:'Order failed',stale:'stale',
- pd:'D',pw:'W',pm:'M',searchPh:'🔍 Search to buy: name / code / pinyin (e.g. byd, nvda, 00700)',noRes:'No matches — try another keyword',half:'Half',all:'All-in',rsiOb:'overbought',rsiOs:'oversold',rsiN:'neutral',gold:'golden cross',dead:'death cross',up:'bullish',dn:'bearish'}};
+ pd:'D',pw:'W',pm:'M',searchPh:'🔍 Search to buy: name / code / pinyin (e.g. byd, nvda, 00700)',noRes:'No matches — try another keyword',hai:'🤖 AI TRADING CREW (the office eight)',aiOn:'⏸ Stop crew',aiOff:'▶ Start crew',aiMin:'min/cycle',aiNote:'Paper only: universe = watchlist + picks, rule scoring + risk gates, every order carries its rationale (see order notes)',aiOffState:'Disabled',aiNoEng:'Engine not running (start via run.sh)',aiRun:'Running',aiRound:'cycle ',aiRound2:'',aiNext:'next',prof_cons:'Conservative',prof_bal:'Balanced',prof_aggr:'Aggressive',half:'Half',all:'All-in',rsiOb:'overbought',rsiOs:'oversold',rsiN:'neutral',gold:'golden cross',dead:'death cross',up:'bullish',dn:'bearish'}};
 const T=D[LANG];document.documentElement.lang=LANG==='zh'?'zh-CN':'en';
 const $=i=>document.getElementById(i),esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const f2=(v,d=2)=>v==null||isNaN(v)?'—':(+v).toLocaleString(LANG==='zh'?'zh-CN':'en-US',{minimumFractionDigits:d,maximumFractionDigits:d});
@@ -162,7 +182,7 @@ async function loadPos(){try{const d=await J('/api/trade/positions');POS=d.posit
  $('pos').innerHTML=POS.map(p=>{const share=p.market_value!=null&&tot[p.market]?p.market_value/tot[p.market]*100:null;
  return`<tr class="clk" data-sym="${esc(p.symbol)}"><td>${esc(p.market)}</td><td>${esc(p.symbol)}<br><span class="mut">${esc(p.name||'')}</span></td><td>${p.qty}</td><td>${p.sellable_qty}</td><td>${f2(p.avg_cost,3)}</td><td>${p.price==null?'—':f2(p.price)}${p.price_stale?' <span class="mut">'+T.stale+'</span>':''}</td><td>${p.market_value==null?'—':f2(p.market_value)}</td><td>${share==null?'—':`<div class="alloc"><i style="width:${share.toFixed(1)}%"></i></div><span class="mut">${f2(share,1)}%</span>`}</td><td class="${(p.unrealized_pnl||0)>=0?'pos':'neg'}">${p.unrealized_pnl==null?'—':f2(p.unrealized_pnl)+' ('+f2(p.unrealized_pnl_pct)+'%)'}</td></tr>`}).join('')||`<tr><td colspan="9" class="mut">${T.none}</td></tr>`;
  document.querySelectorAll('#pos tr.clk').forEach(r=>r.onclick=()=>select(r.dataset.sym));est()}catch(e){}}
-async function loadOrds(){try{const d=await J('/api/trade/orders');$('ords').innerHTML=(d.orders||[]).slice(0,30).map(o=>`<tr><td class="mut">${o.ts?new Date(o.ts*1000).toLocaleString(LANG==='zh'?'zh-CN':'en-US',{month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',hour12:false}):''}</td><td>${esc(o.symbol)}</td><td class="${o.side==='buy'?'pos':'neg'}">${o.side==='buy'?T.buy:T.sell}</td><td>${o.qty}</td><td>${o.fill_price==null?(o.limit_price||'—'):f2(o.fill_price)}</td><td>${f2(o.fee)}</td><td>${T[o.status]||o.status}</td><td>${o.status==='open'?`<button class="btn" data-cancel="${o.id}">${T.cancel}</button>`:''}</td></tr>`).join('')||`<tr><td colspan="8" class="mut">${T.none}</td></tr>`;
+async function loadOrds(){try{const d=await J('/api/trade/orders');$('ords').innerHTML=(d.orders||[]).slice(0,30).map(o=>`<tr><td class="mut">${o.ts?new Date(o.ts*1000).toLocaleString(LANG==='zh'?'zh-CN':'en-US',{month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',hour12:false}):''}</td><td>${esc(o.symbol)}${o.note?`<br><span class="mut" style="font-size:10px;white-space:normal">${esc(o.note)}</span>`:''}</td><td class="${o.side==='buy'?'pos':'neg'}">${o.side==='buy'?T.buy:T.sell}</td><td>${o.qty}</td><td>${o.fill_price==null?(o.limit_price||'—'):f2(o.fill_price)}</td><td>${f2(o.fee)}</td><td>${T[o.status]||o.status}</td><td>${o.status==='open'?`<button class="btn" data-cancel="${o.id}">${T.cancel}</button>`:''}</td></tr>`).join('')||`<tr><td colspan="8" class="mut">${T.none}</td></tr>`;
  document.querySelectorAll('[data-cancel]').forEach(b=>b.onclick=async()=>{try{await J('/api/trade/cancel',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({id:+b.dataset.cancel})});refresh()}catch(e){toast(e.message,0)}})}catch(e){}}
 async function loadNews(){try{const d=await J('/api/finance/news');$('news').innerHTML=(d.items||[]).slice(0,6).map(n=>`<div class="nws"><span class="tm">${esc((n.time||'').slice(11,16))}</span><a href="${esc(n.url||'#')}" target="_blank" rel="noopener">${esc(n.title)}</a></div>`).join('')||'<span class="mut">—</span>'}catch(e){}}
 function refresh(){loadAcct();loadPos();loadOrds()}
@@ -196,5 +216,26 @@ document.addEventListener('click',e=>{if(!$('swrap').contains(e.target))$('sres'
 async function loadSelQuote(){if(!SEL||WATCH.some(w=>w.symbol===SEL))return;try{const q=await J('/api/finance/quotes?symbols='+encodeURIComponent(SEL));(q.items||[]).forEach(x=>QUOTES[x.symbol]=x);paintQuote();est()}catch(e){}}
 async function pickSearch(sym){$('sres').style.display='none';$('sq').value='';select(sym);loadSelQuote()}
 loadWatch().then(()=>loadTape());refresh();loadNews();
+const PERSONAS={CHIEF:['#ff4fb4','拍板决策','Final calls'],SCAN:['#3f8cff','指标扫描','Indicator scan'],VET:['#ececf1','审查否决','Veto gate'],RISK:['#ff9a3c','风控闸门','Risk gates'],SOCIAL:['#ff4d5e','新闻舆情','News sentiment'],CRAWLER:['#3fd5ff','数据抓取','Data fetch'],FILLS:['#3dff8f','执行下单','Execution'],JOURNAL:['#ffd23f','复盘记录','Journal']};
+$('hai').textContent=T.hai;$('ainote').textContent=T.aiNote;$('aicyc').textContent=T.aiMin;
+document.querySelectorAll('#aiProf button').forEach(b=>b.textContent=T['prof_'+b.dataset.p.slice(0,4)==='cons'?'cons':b.dataset.p.slice(0,3)==='bal'?'bal':'aggr']);
+let AICFG={enabled:false,profile:'balanced',cycle_min:10};
+async function aiSet(patch){try{const d=await J('/api/ai/config',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(patch)});AICFG=d.config||AICFG;loadAI()}catch(e){toast(e.message,0)}}
+$('aiToggle').onclick=()=>aiSet({enabled:!AICFG.enabled});
+document.querySelectorAll('#aiProf button').forEach(b=>b.onclick=()=>aiSet({profile:b.dataset.p}));
+$('aiCycle').onchange=()=>aiSet({cycle_min:+$('aiCycle').value});
+async function loadAI(){try{const d=await J('/api/ai/status');const cfg=d.config||{};AICFG=cfg;const st=d.status||{};
+ $('aiToggle').textContent=cfg.enabled?T.aiOn:T.aiOff;$('aiToggle').style.background=cfg.enabled?'var(--r)':'var(--g)';$('aiToggle').style.color=cfg.enabled?'#fff':'#000';$('aiToggle').style.borderColor='transparent';
+ document.querySelectorAll('#aiProf button').forEach(b=>b.classList.toggle('on',b.dataset.p===cfg.profile));
+ $('aiCycle').value=String(cfg.cycle_min||10);
+ $('aistate').textContent=!cfg.enabled?T.aiOffState:!d.running?T.aiNoEng:(T.aiRun+' · '+T.aiRound+(st.cycle||0)+T.aiRound2+(st.next_cycle_ts?' · '+T.aiNext+' '+new Date(st.next_cycle_ts*1000).toLocaleTimeString(LANG==='zh'?'zh-CN':'en-US',{hour:'2-digit',minute:'2-digit',hour12:false}):''));
+ const evs=(st.events||[]).slice().reverse();
+ $('aifeed').innerHTML=evs.length?evs.map(e=>{const P=PERSONAS[e.persona]||['#888',e.persona,''];const ic=e.kind==='buy'?'▲':e.kind==='sell'?'▼':e.kind==='veto'?'⛔':e.kind==='warn'?'⚠':'·';
+ return`<div class="ai-ev"><span class="tm">${new Date(e.ts*1000).toLocaleTimeString(LANG==='zh'?'zh-CN':'en-US',{hour:'2-digit',minute:'2-digit',hour12:false})}</span><span class="pchip2" style="background:${P[0]}">${e.persona}</span><span class="${e.kind==='buy'?'pos':e.kind==='sell'?'neg':''}">${ic} ${esc(e.text)}</span></div>`}).join(''):'<span class="mut">—</span>';
+ const pl=st.persona_last||{};
+ $('aicrew').innerHTML=Object.keys(PERSONAS).map(k=>{const P=PERSONAS[k];const last=pl[k];
+ return`<div class="ai-mem"><div class="nm" style="color:${P[0]}">${k} <span class="rl">· ${LANG==='zh'?P[1]:P[2]}</span></div><div class="la">${last?esc(last.text):'—'}</div></div>`}).join('');
+ }catch(e){}}
+loadAI();setInterval(loadAI,10000);
 setInterval(()=>{loadWatch();refresh();loadSelQuote()},15000);setInterval(()=>{loadTape();loadNews();if(SEL)loadInd()},60000);
 </script></body></html>
