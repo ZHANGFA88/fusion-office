@@ -1,0 +1,5 @@
+data/paper.db
+__pycache__/
+.cyqenv/
+*.pyc
+.DS_Store

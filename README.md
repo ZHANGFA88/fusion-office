@@ -1,0 +1,50 @@
+# Fusion Office（融合办公室）
+
+以 **grokbot-jev-dashboard 的虚拟交易办公室**为基座的个人情报与交易台：走进办公室就能看懂一支自主运行的智能体队伍在干什么、合不合规矩、账对不对。在此之上加了 A股/港股/美股**模拟交易台**（纸面下单、真实下单接口留口）与四个分室：行情、定投赛跑、机械蜘蛛、AI 安全。界面中英双语（默认中文），数据自带的葡语日志经模板翻译层转成当前语言显示。
+
+构建规格见 [docs/SPEC-V2.md](docs/SPEC-V2.md)，grokbot 原仓研读笔记见 [STUDY.md](STUDY.md)。同系列另有钛金影院风版本：ZHANGFA88/fusion-dashboard。
+
+## 分室
+
+| 路由 | 内容 |
+|---|---|
+| `/`（app/index.html） | 办公室：像素办公室动画 + 8 位机器人格 + 余额/JEV 分析/thresholds 三面板（grokbot 原页改造：双语化 + 日志翻译层 + 顶栏分室导航 + 股票交易员状态条）。数据每 20 秒直连上游 `data` 分支 state.json，本机 `/api/office/state` 代理兜底 |
+| `/app/trade.html` | 股票交易台：三市场模拟子账户（CNY/HKD/USD）、FinSight 行情与 K 线、市价/限价下单、持仓盈亏、工单账本 |
+| `/app/markets.html` | 行情室：FinSight 指数、自选、板块、精选、快讯 |
+| `/app/race.html` | 赛跑放映室：六大指数定投赛跑全片 + 终值条（组合 ¥2,746,664 / +353.24% / IRR 16.17%） |
+| `/app/spider.html` | 蜘蛛工坊：prompt-spider-ui 舞台（本机 :4317）状态与内嵌 + MCP 工具清单 |
+| `/app/safety.html` | AI 安全情报室：AISafetyHot-Hub 每日简报 + 每日 30 篇论文 |
+
+## 运行
+
+需要常开机器（办公室数据与行情为实时拉取）。
+
+```bash
+python3 scripts/serve.py            # 主服务，默认端口 8772（FINANCE_PORT 可改）
+node modules/spider/server.mjs      # 蜘蛛舞台，端口 4317（可选）
+```
+
+- 行情与分析接口沿用 FinSight（`/api/finance/*`），办公室代理 `/api/office/state`，安全内容经 `/api/fusion/safety-file` 同源代理读取。
+- 蜘蛛 MCP（可选）：`cd modules/spider/mcp && npm ci` 后按其 README 接入。
+- 模拟交易数据存 `data/paper.db`（SQLite，运行时生成，不入库）；`data/finance.db` 为报价缓存种子。
+
+## 模拟交易规则（PAPER）
+
+- 下单走统一网关抽象 `OrderGateway`：当前实现 `PaperGateway`（纸面撮合）；`BrokerGateway` 为真实券商留口（未接入，调用返回未实现）。
+- 市价单按 FinSight 最新报价即时成交；无报价拒绝成交（不伪造价格），缓存旧价成交会打 `stale_price` 标记。限价单挂单，读取账户/持仓/工单时检查触发。
+- A股：买入 100 股整数手，T+1（当日买入不可卖）；佣金 0.025%（最低 ¥5），卖出印花税 0.05%。港股：佣金 0.03% + 约 0.0057% 征费。美股：0 费率。以上均为模拟参数，界面有明示。
+- 初始虚拟资金：CNY 1,000,000 / HKD 1,000,000 / USD 100,000；交易台内可一键重置。
+
+## 语言
+
+- 界面字符串中英双语包（`app/assets/i18n.js`，办公室页因单文件架构内联同份词条，改词条需两处同步）。
+- 葡语日志翻译层 `trLog()`：引擎日志为固定句式 + 变量，按模板正则翻译（实测对上游 250 条日志残留葡语为 0），未覆盖的新句式回退原文并加 `[原文]` 标记，不乱译。
+
+## 来源与许可
+
+- 办公室基座：Vazolini/grokbot-jev-dashboard（葡语 Degen Lab 纸面交易页，含其 `decisions.js` 与办公室插画）——**原仓无 LICENSE**，本仓默认私有，公开前请自行评估。
+- 行情后端 FinSight finance-dashboard：用户自有项目。
+- 机械蜘蛛：Kirito14IT/prompt-spider-ui，MIT（见 modules/spider/LICENSE）。
+- AI 安全内容：wuyoscar/AISafetyHot-Hub，文字 CC BY-NC 4.0，页面内有署名。
+- 定投赛跑：用户自有回测引擎与数据（modules/race）。
+- 未入库的大文件：`modules/spider/docs/preview.gif`（8.7MB 预览动图）与 `modules/spider/docs/brand/` 品牌图片（非运行必需，需要时见上游仓库）。
