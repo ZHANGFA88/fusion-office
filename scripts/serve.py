@@ -2291,15 +2291,19 @@ def _paper_place(order):
     市价单按 fetch_quotes 最新价即时成交；限价单置 open。"""
     market, symbol, side = order['market'], order['symbol'], order['side']
     qty, otype, limit_price = order['qty'], order['type'], order.get('price')
+    # 报价走网络（无报价的代码可能慢至数十秒），必须在拿 DB 锁之前取，
+    # 否则一张慢单会把整个交易子系统的读写全部冻住（2026-10-16 审计修复）。
+    quote = stale = None
+    if otype == 'market':
+        quote, stale = _trade_quote(symbol)
+        if quote is None:
+            raise TradeError('no_quote',
+                             '%s 暂无报价（实时源与缓存均无），市价单拒绝成交——不伪造价格' % symbol)
     with _paper_db_lock, paper_db() as c:
         _trade_ensure_accounts(c)
         _trade_settle_roll(c)
         now = int(time.time())
         if otype == 'market':
-            quote, stale = _trade_quote(symbol)
-            if quote is None:
-                raise TradeError('no_quote',
-                                 '%s 暂无报价（实时源与缓存均无），市价单拒绝成交——不伪造价格' % symbol)
             price = float(quote['price'])
             name = quote.get('name') or symbol
             note = 'stale_price' if stale else None
@@ -2345,16 +2349,24 @@ def _paper_list(limit=100):
 def _paper_sweep():
     """触发所有满足条件的 open 限价单（买入价<=限价 / 卖出价>=限价）。
     在每次 account/positions/orders 读取与下单时调用（SPEC-V2 §6 的 15 秒轮询语义在服务端体现为按需检查）。"""
+    # 两段式：先在锁内取挂单清单，锁外取报价（网络慢不冻结交易读写），
+    # 再回锁内逐单复核状态后成交（期间被撤的单跳过）。2026-10-16 审计修复。
     with _paper_db_lock, paper_db() as c:
         _trade_ensure_accounts(c)
+        opens = [dict(r) for r in c.execute(
+            "SELECT * FROM orders WHERE status='open' ORDER BY id").fetchall()]
+    if not opens:
+        return 0
+    syms = sorted({r['symbol'] for r in opens})
+    quotes = fetch_quotes(syms)
+    n = 0
+    with _paper_db_lock, paper_db() as c:
         _trade_settle_roll(c)
-        opens = c.execute("SELECT * FROM orders WHERE status='open' ORDER BY id").fetchall()
-        if not opens:
-            return 0
-        syms = sorted({r['symbol'] for r in opens})
-        quotes = fetch_quotes(syms)
-        n = 0
         for o in opens:
+            cur = c.execute("SELECT * FROM orders WHERE id=?", (o['id'],)).fetchone()
+            if cur is None or cur['status'] != 'open':
+                continue
+            o = dict(cur)
             q = quotes.get(o['symbol'])
             if not q or not q.get('price'):
                 continue
@@ -2376,7 +2388,7 @@ def _paper_sweep():
             c.execute("INSERT INTO fills(order_id,ts,price,qty,fee) VALUES(?,?,?,?,?)",
                       (o['id'], now, price, o['qty'], fee))
             n += 1
-        return n
+    return n
 
 def _paper_reset():
     """清账重种子账户（测试/重置用）。"""
