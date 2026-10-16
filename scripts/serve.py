@@ -2095,9 +2095,17 @@ def _fusion_race():
         return {'online': False}
 
 def _fusion_spider():
+    # 实时新闻喂入器在线（心跳 <240 秒）也算蜘蛛在线，模式记为 live-news
+    try:
+        with open(os.path.join(DATA_DIR, 'spider-live.json'), encoding='utf-8') as f:
+            d = json.load(f)
+        if (time.time() * 1000 - float(d.get('updated') or 0)) / 1000.0 < 240:
+            return {'online': True, 'mode': 'live-news'}
+    except Exception:
+        pass
     try:
         json.loads(http_get('http://127.0.0.1:4317/status', timeout=2))
-        return {'online': True}
+        return {'online': True, 'mode': 'demo'}
     except Exception:
         return {'online': False}
 
@@ -2674,6 +2682,8 @@ class Handler(SimpleHTTPRequestHandler):
             if path == '/api/office/state':
                 # V2：办公室上游 state.json 同源代理，与 /api/fusion/degen-state 同口径，复用同一 handler
                 return self._api_fusion_degen_state(q)
+            if path == '/api/fusion/spider-live':
+                return self._api_fusion_spider_live(q)
             if path == '/api/trade/account':
                 return self._api_trade_account(q)
             if path == '/api/trade/positions':
@@ -2832,6 +2842,19 @@ class Handler(SimpleHTTPRequestHandler):
         self.end_headers()
         self.wfile.write(raw)
 
+
+    def _api_fusion_spider_live(self, q):
+        """/api/fusion/spider-live：蜘蛛新闻喂入器（scripts/spider_news_feeder.mjs）写的实时会话地址。
+        文件由喂入器每轮轮询刷新 updated 心跳；超过 240 秒未刷新视为喂入器离线。"""
+        try:
+            with open(os.path.join(DATA_DIR, 'spider-live.json'), encoding='utf-8') as f:
+                d = json.load(f)
+            age = (time.time() * 1000 - float(d.get('updated') or 0)) / 1000.0
+            return self._json(200, {'ok': True, 'url': d.get('url'), 'session_id': d.get('session_id'),
+                                    'age_sec': round(age, 1), 'live': age < 240})
+        except Exception:
+            return self._json(200, {'ok': False, 'live': False,
+                                    'error': 'spider news feeder not running (node scripts/spider_news_feeder.mjs)'})
 
     # ========== V2 模拟交易台 API ==========
     def _api_trade_account(self, q):
