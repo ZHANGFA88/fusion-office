@@ -3,3 +3,10 @@ __pycache__/
 .cyqenv/
 *.pyc
 .DS_Store
+data/race-daily-live.json
+data/race-engine-live.json
+data/race-meta.json
+data/race-refresh.lock
+data/spider-live.json
+data/spider-seen.json
+data/spider-feeder.lock

@@ -135,6 +135,31 @@
   #backlink{position:fixed;left:24px;top:18px;z-index:50;font-size:22px;color:#7d8fa9;text-decoration:none;letter-spacing:2px;background:rgba(6,10,20,.6);padding:8px 18px;border-radius:20px;border:1px solid rgba(125,143,169,.25)}
   #backlink:hover{color:#e8eef7;border-color:#4aa8ff}
   #err{position:fixed;inset:0;z-index:99;display:flex;align-items:center;justify-content:center;background:#02040a;color:#ff8a8a;font-size:30px;text-align:center;padding:60px}
+
+  /* ---- 数据时间轴 / 事件 / 曲线（活数据交互层） ---- */
+  #dctrl{position:fixed;left:50%;transform:translateX(-50%);bottom:96px;z-index:50;display:flex;align-items:center;gap:14px;background:rgba(6,10,20,.82);border:1px solid rgba(245,197,66,.35);border-radius:40px;padding:8px 22px;backdrop-filter:blur(8px);max-width:96vw}
+  #dctrl .dlab{font-size:19px;color:#f5c542;letter-spacing:2px;white-space:nowrap}
+  #dscrub{width:400px;accent-color:#f5c542;cursor:pointer}
+  #dread{font-size:19px;color:#e8eef7;font-variant-numeric:tabular-nums;white-space:nowrap;min-width:330px}
+  #dread b{color:#f5c542}
+  #speed{background:#0b1220;color:#e8eef7;border:1px solid rgba(125,143,169,.4);border-radius:14px;font-size:17px;padding:3px 6px;cursor:pointer}
+  #btnCurve{background:none;border:1px solid rgba(74,168,255,.5);color:#bcd7ff;font-size:18px;border-radius:16px;padding:5px 14px;cursor:pointer;white-space:nowrap}
+  #btnCurve:hover{background:rgba(74,168,255,.18)}
+  #evchips{position:fixed;left:50%;transform:translateX(-50%);bottom:152px;z-index:49;display:flex;gap:8px;max-width:97vw;overflow-x:auto;padding:2px}
+  #evchips button{flex:0 0 auto;background:rgba(6,10,20,.78);border:1px solid rgba(125,143,169,.35);color:#c9d6ea;font-size:16px;border-radius:16px;padding:5px 13px;cursor:pointer;white-space:nowrap}
+  #evchips button:hover{border-color:#f5c542;color:#fff}
+  #evchips button.on{border-color:#f5c542;color:#f5c542}
+  #evpanel{position:fixed;left:auto;right:22px;top:84px;z-index:55;width:440px;max-width:44vw;background:rgba(8,12,22,.94);border:1px solid rgba(245,197,66,.4);border-radius:14px;padding:22px 24px;color:#e8eef7;box-shadow:0 18px 50px rgba(0,0,0,.5)}
+  #evpanel h3{margin:6px 0 4px;font-size:27px}
+  #evpanel .x{position:absolute;right:12px;top:8px;background:none;border:none;color:#8fa3c2;font-size:24px;cursor:pointer}
+  #evpanel .sub{color:#a9bcd8;font-size:17px;line-height:1.5}
+  #curveWrap{position:fixed;inset:0;z-index:60;background:#04070f;display:flex;flex-direction:column}
+  #curveWrap .chead{display:flex;align-items:center;gap:16px;padding:14px 22px;border-bottom:1px solid rgba(74,168,255,.2);flex-wrap:wrap}
+  #curveWrap .chead .ct{font-size:22px;color:#e8eef7;letter-spacing:2px}
+  #curveLegend{display:flex;gap:14px;flex-wrap:wrap;align-items:center}
+  #curveWrap label{font-size:17px;color:#c9d6ea;display:flex;gap:6px;align-items:center;cursor:pointer;white-space:nowrap}
+  #curveCv{flex:1;width:100%}
+  #curveRead{font-size:18px;color:#9fb3cf;font-variant-numeric:tabular-nums}
 </style>
 </head>
 <body>
@@ -218,6 +243,20 @@
   <input id="prog" type="range" min="0" max="117.5" step="0.05" value="0">
   <div id="tlabel">0.0s / 117.5s</div>
 </div>
+
+<div id="dctrl">
+  <span class="dlab">数据</span>
+  <input id="dscrub" type="range" min="0" max="4379" step="1" value="0">
+  <div id="dread">载入中…</div>
+  <select id="speed" title="播放速度"><option value="0.5">0.5×</option><option value="1" selected>1×</option><option value="2">2×</option><option value="4">4×</option></select>
+  <button id="btnCurve">曲线对比</button>
+</div>
+<div id="evchips"></div>
+<div id="evpanel" class="hidden ecard"></div>
+<div id="curveWrap" class="hidden">
+  <div class="chead"><span class="ct">累计收益曲线对比</span><span id="curveLegend"></span><span id="curveRead"></span><span style="flex:1"></span><button id="btnCurveX" style="background:none;border:1px solid rgba(125,143,169,.4);color:#e8eef7;font-size:18px;border-radius:14px;padding:5px 16px;cursor:pointer">返回赛跑 ✕</button></div>
+  <canvas id="curveCv"></canvas>
+</div>
 <div id="err" class="hidden"></div>
 <script>
 "use strict";
@@ -226,6 +265,7 @@
    规格：FRAME_SPEC_V3（逐帧）+ FRAME_SPEC_V2（文案）；数字一律取引擎 engine.json
    ================================================================ */
 const DUR = 117.5, W = 1920, H = 1080;
+let LAST = 4379; // 末日序号：静态版 4379，活数据载入后按实际天数更新
 const cv = document.getElementById('gl'), ctx = cv.getContext('2d');
 const $ = id => document.getElementById(id);
 
@@ -259,7 +299,7 @@ function dayOf(ds){ if(dayCache[ds]!==undefined) return dayCache[ds]; const i=D.
 function epOf(day){ let n=0; for(const b of D.buy_idx){ if(b<=day) n++; else break; } return n; }
 
 /* PART I 变速时间轴（关键帧：[胶片秒, 数据日序号]；慢段≈2.77期/s，安静段≈6.9期/s） */
-const PART1_KF=[[20.5,0],[22,184],[23.24,369],[24.82,464],[26.58,727],[29.31,891],[31.74,1254],[37.36,1592],[44.27,2624],[52.34,3109],[52.37,3113],[56.21,3344],[56.4,3372],[63.5,3799],[64.38,3931],[65.41,3993],[68,4379]];
+let PART1_KF=[[20.5,0],[22,184],[23.24,369],[24.82,464],[26.58,727],[29.31,891],[31.74,1254],[37.36,1592],[44.27,2624],[52.34,3109],[52.37,3113],[56.21,3344],[56.4,3372],[63.5,3799],[64.38,3931],[65.41,3993],[68,4379]];
 function dayOfP1(t){
   if(t<=PART1_KF[0][0]) return PART1_KF[0][1];
   for(let i=0;i<PART1_KF.length-1;i++){
@@ -277,7 +317,7 @@ function tOfP1(day){
   }
   return 68;
 }
-const dayOfP2 = t => Math.round(clamp((t-74)/23,0,1)*4379);
+const dayOfP2 = t => Math.round(clamp((t-74)/23,0,1)*LAST);
 
 /* ---------- 事件卡元数据（文案取自 FRAME_SPEC_V2，数值引擎） ---------- */
 const EV_META=[
@@ -296,7 +336,7 @@ function buildEvents(){
   EV=D.events.map((e,i)=>{
     const m=EV_META[i];
     const s=dayOf(e.start), en=dayOf(e.end);
-    const a=Math.max(0,s-22), b=Math.min(4379,en+6);
+    const a=Math.max(0,s-22), b=Math.min(LAST,en+6);
     const tA=tOfP1(a), tS=tOfP1(s), tE=tOfP1(en), tB=tOfP1(b);
     const hero=MK.find(x=>x.k===m.hero);
     const pairs=m.pairs.map(k=>({m:MK.find(x=>x.k===k),lo:e.pairs_minmax[k][0]/100,hi:e.pairs_minmax[k][1]/100}));
@@ -605,7 +645,7 @@ function cardHTML(e,d,vals){
 function evCardState(e,t,i){
   // 返回 null=隐藏；否则 {frozen, showVerdict}
   const next=EV[i+1];
-  let tOut=next?e.tB:tOfP1(Math.min(4379,e.en+304));
+  let tOut=next?e.tB:tOfP1(Math.min(LAST,e.en+304));
   // 交替：下一卡 tA 时本卡开始淡出
   let op=0, frozen=false, showVerdict=false;
   if(t>=e.tA-0.5&&t<tOut){
@@ -652,23 +692,23 @@ function drawRaceChart(d,opt){
   ctx.font='24px sans-serif'; ctx.fillStyle='#7d8fa9';
   for(let yr=2010;yr<=2026;yr++){
     const dd=dayOf(yr+'-01-01'); if(dd<0) continue;
-    const xx=P1X0+dd/4379*(P1X1-P1X0);
+    const xx=P1X0+dd/LAST*(P1X1-P1X0);
     ctx.fillRect(xx-1,yx-6,2,12); ctx.fillText(yr,xx-26,yx+36);
   }
   EV.forEach(e=>{
-    const x0=P1X0+e.s/4379*(P1X1-P1X0), x1=P1X0+e.en/4379*(P1X1-P1X0);
+    const x0=P1X0+e.s/LAST*(P1X1-P1X0), x1=P1X0+e.en/LAST*(P1X1-P1X0);
     ctx.fillStyle=e.dir==='up'?'rgba(255,80,80,0.5)':'rgba(60,220,120,0.5)';
     ctx.fillRect(x0,yx-5,Math.max(3,x1-x0),10);
   });
-  ctx.fillStyle='#f5c542'; ctx.beginPath(); ctx.arc(P1X0+d/4379*(P1X1-P1X0),yx,7,0,7); ctx.fill();
+  ctx.fillStyle='#f5c542'; ctx.beginPath(); ctx.arc(P1X0+d/LAST*(P1X1-P1X0),yx,7,0,7); ctx.fill();
   // 六线
   const step=Math.max(1,Math.floor(d/900));
   MK.forEach(m=>{
     const arr=D.solo_ret[m.k];
     ctx.save(); ctx.strokeStyle=m.color; ctx.lineWidth=4.5; ctx.shadowColor=m.color; ctx.shadowBlur=12;
     ctx.lineJoin='round'; ctx.beginPath();
-    for(let i=0;i<=d;i+=step){ const xx=P1X0+i/4379*(P1X1-P1X0), yy=y(arr[i]); i===0?ctx.moveTo(xx,yy):ctx.lineTo(xx,yy); }
-    const ex=P1X0+d/4379*(P1X1-P1X0), ey=y(arr[d]);
+    for(let i=0;i<=d;i+=step){ const xx=P1X0+i/LAST*(P1X1-P1X0), yy=y(arr[i]); i===0?ctx.moveTo(xx,yy):ctx.lineTo(xx,yy); }
+    const ex=P1X0+d/LAST*(P1X1-P1X0), ey=y(arr[d]);
     ctx.lineTo(ex,ey); ctx.stroke(); ctx.restore();
     // 线头
     ctx.save(); ctx.fillStyle='#fff'; ctx.shadowColor=m.color; ctx.shadowBlur=16;
@@ -701,7 +741,7 @@ function sceneP1(t){
   // 极值标注圈
   EV.forEach(e=>{
     if(t>e.exT-0.3&&t<e.exT+2.5&&t<e.tB+1){
-      const xx=P1X0+e.exDay/4379*(P1X1-P1X0), yy=y(e.exVal);
+      const xx=P1X0+e.exDay/LAST*(P1X1-P1X0), yy=y(e.exVal);
       const ph=(t-(e.exT-0.3))*1.4;
       ctx.save(); ctx.strokeStyle=e.hero.color; ctx.lineWidth=3;
       for(let k=0;k<2;k++){ const rr=14+((ph+k*0.5)%1)*36;
@@ -733,8 +773,8 @@ let bpParts=null;
 function initBursts(){
   bpParts=[];
   for(let i=0;i<520;i++){
-    const m=MK[i%6], d0=Math.floor(Math.random()*4379);
-    bpParts.push({x:P1X0+d0/4379*(P1X1-P1X0), y:200+Math.random()*560,
+    const m=MK[i%6], d0=Math.floor(Math.random()*LAST);
+    bpParts.push({x:P1X0+d0/LAST*(P1X1-P1X0), y:200+Math.random()*560,
       vx:(Math.random()-0.3)*260, vy:-120-Math.random()*380, c:m.color, life:1});
   }
 }
@@ -742,7 +782,7 @@ function transB(t,dt){
   $('raceHud').classList.add('hidden'); $('cards').classList.add('hidden'); $('banner').classList.add('hidden');
   const P=$('partTitle'); P.classList.remove('hidden');
   if(t<70){ // 定格（60000 横幅延续到 ~69.5）
-    drawFloor(t); drawRaceChart(4379,{noLabels:false});
+    drawFloor(t); drawRaceChart(LAST,{noLabels:false});
     const B=$('banner');
     if(t>=66.7&&t<69.5){ B.classList.remove('hidden'); $('bannerTxt').textContent=P1_BANNERS[2].txt;
       B.style.opacity=t>69?clamp((69.5-t)/0.5,0,1):1; }
@@ -751,7 +791,7 @@ function transB(t,dt){
   if(t<71){ // 镜头右掠
     const f=(t-70);
     drawFloor(t);
-    drawRaceChart(4379,{shiftX:-f*900});
+    drawRaceChart(LAST,{shiftX:-f*900});
     ctx.fillStyle='rgba(120,160,220,0.06)'; ctx.font='800 300px sans-serif'; ctx.textAlign='center';
     for(let k=0;k<5;k++) ctx.fillText(2021+k, 960-f*1400+k*700, 700);
     ctx.textAlign='left';
@@ -791,18 +831,18 @@ function transB(t,dt){
     const yMax=4.2, y=v=>P1Y1-(v/yMax)*(P1Y1-P1Y0);
     ctx.save(); ctx.globalAlpha=0.35; ctx.lineWidth=2;
     MK.forEach(m=>{ ctx.strokeStyle=m.color; ctx.beginPath();
-      for(let i=0;i<=4379;i+=40){ const xx=P1X0+i/4379*(P1X1-P1X0); i===0?ctx.moveTo(xx,y(D.solo_ret[m.k][i])):ctx.lineTo(xx,y(D.solo_ret[m.k][i])); }
+      for(let i=0;i<=LAST;i+=40){ const xx=P1X0+i/LAST*(P1X1-P1X0); i===0?ctx.moveTo(xx,y(D.solo_ret[m.k][i])):ctx.lineTo(xx,y(D.solo_ret[m.k][i])); }
       ctx.stroke(); });
     ctx.restore();
     ctx.save(); ctx.setLineDash([14,10]); ctx.strokeStyle='rgba(255,255,255,0.85)'; ctx.lineWidth=3;
     ctx.beginPath();
-    for(let i=0;i<=4379*f;i+=30){ const xx=P1X0+i/4379*(P1X1-P1X0); i===0?ctx.moveTo(xx,y(D.eq_ret[i])):ctx.lineTo(xx,y(D.eq_ret[i])); }
+    for(let i=0;i<=LAST*f;i+=30){ const xx=P1X0+i/LAST*(P1X1-P1X0); i===0?ctx.moveTo(xx,y(D.eq_ret[i])):ctx.lineTo(xx,y(D.eq_ret[i])); }
     ctx.stroke(); ctx.restore();
     ctx.save(); ctx.strokeStyle=GOLD; ctx.lineWidth=7; ctx.shadowColor=GOLD; ctx.shadowBlur=22; ctx.lineCap='round';
     ctx.beginPath();
-    for(let i=0;i<=4379*f;i+=24){ const xx=P1X0+i/4379*(P1X1-P1X0); i===0?ctx.moveTo(xx,y(D.port_ret[i])):ctx.lineTo(xx,y(D.port_ret[i])); }
+    for(let i=0;i<=LAST*f;i+=24){ const xx=P1X0+i/LAST*(P1X1-P1X0); i===0?ctx.moveTo(xx,y(D.port_ret[i])):ctx.lineTo(xx,y(D.port_ret[i])); }
     ctx.stroke(); ctx.restore();
-    const hx=P1X0+f*(P1X1-P1X0), hy=y(D.port_ret[Math.floor(4379*f)]);
+    const hx=P1X0+f*(P1X1-P1X0), hy=y(D.port_ret[Math.floor(LAST*f)]);
     ctx.save(); ctx.fillStyle='#fff'; ctx.shadowColor=GOLD; ctx.shadowBlur=26;
     ctx.beginPath(); ctx.arc(hx,hy,11,0,7); ctx.fill(); ctx.restore();
   }
@@ -812,7 +852,7 @@ function transB(t,dt){
 let CH=null, P2_BANNERS=[];
 function firstCross(arr,lvl){ for(let i=0;i<arr.length;i++) if(arr[i]>=lvl) return i; return arr.length-1; }
 function buildP2Banners(){
-  const t2=day=>74+(day/4379)*23;
+  const t2=day=>74+(day/LAST)*23;
   const d100=firstCross(D.port_ret,1.0), d200=firstCross(D.port_ret,2.0), d300=firstCross(D.port_ret,3.0);
   const dLast=Math.max(...D.port_ret.map((v,i)=>v<0?i:-1));
   const dMdd=dayOf(D.portfolio.mdd_day);
@@ -846,24 +886,24 @@ function drawP2Chart(d,zoom){
   const step=Math.max(1,Math.floor(d/700));
   ctx.save(); ctx.globalAlpha=0.45; ctx.lineWidth=2;
   MK.forEach(m=>{ ctx.strokeStyle=m.color; ctx.beginPath();
-    for(let i=0;i<=d;i+=step){ const xx=P1X0+i/4379*(P1X1-P1X0); i===0?ctx.moveTo(xx,y(D.solo_ret[m.k][i])):ctx.lineTo(xx,y(D.solo_ret[m.k][i])); }
+    for(let i=0;i<=d;i+=step){ const xx=P1X0+i/LAST*(P1X1-P1X0); i===0?ctx.moveTo(xx,y(D.solo_ret[m.k][i])):ctx.lineTo(xx,y(D.solo_ret[m.k][i])); }
     ctx.stroke(); });
   ctx.restore();
   // 六等分白虚线
   ctx.save(); ctx.setLineDash([14,10]); ctx.strokeStyle='rgba(255,255,255,0.8)'; ctx.lineWidth=3;
   ctx.beginPath();
-  for(let i=0;i<=d;i+=step){ const xx=P1X0+i/4379*(P1X1-P1X0); i===0?ctx.moveTo(xx,y(D.eq_ret[i])):ctx.lineTo(xx,y(D.eq_ret[i])); }
+  for(let i=0;i<=d;i+=step){ const xx=P1X0+i/LAST*(P1X1-P1X0); i===0?ctx.moveTo(xx,y(D.eq_ret[i])):ctx.lineTo(xx,y(D.eq_ret[i])); }
   ctx.stroke(); ctx.restore();
   // 金线面积 + 线
-  const hx=P1X0+d/4379*(P1X1-P1X0), hy=y(D.port_ret[d]);
+  const hx=P1X0+d/LAST*(P1X1-P1X0), hy=y(D.port_ret[d]);
   const ag=ctx.createLinearGradient(0,y(0),0,hy);
   ag.addColorStop(0,'rgba(245,197,66,0)'); ag.addColorStop(1,'rgba(245,197,66,0.28)');
   ctx.save(); ctx.fillStyle=ag; ctx.beginPath(); ctx.moveTo(P1X0,y(0));
-  for(let i=0;i<=d;i+=step) ctx.lineTo(P1X0+i/4379*(P1X1-P1X0),y(D.port_ret[i]));
+  for(let i=0;i<=d;i+=step) ctx.lineTo(P1X0+i/LAST*(P1X1-P1X0),y(D.port_ret[i]));
   ctx.lineTo(hx,y(0)); ctx.closePath(); ctx.fill(); ctx.restore();
   ctx.save(); ctx.strokeStyle=GOLD; ctx.lineWidth=8; ctx.shadowColor=GOLD; ctx.shadowBlur=24; ctx.lineCap='round'; ctx.lineJoin='round';
   ctx.beginPath();
-  for(let i=0;i<=d;i+=step){ const xx=P1X0+i/4379*(P1X1-P1X0); i===0?ctx.moveTo(xx,y(D.port_ret[i])):ctx.lineTo(xx,y(D.port_ret[i])); }
+  for(let i=0;i<=d;i+=step){ const xx=P1X0+i/LAST*(P1X1-P1X0); i===0?ctx.moveTo(xx,y(D.port_ret[i])):ctx.lineTo(xx,y(D.port_ret[i])); }
   ctx.stroke(); ctx.restore();
   // 线头火花
   for(let k=0;k<14;k++){
@@ -876,7 +916,7 @@ function drawP2Chart(d,zoom){
   // 线尾标签
   ctx.font='700 28px "PingFang SC","Microsoft YaHei",sans-serif';
   ctx.fillStyle=GOLD; ctx.fillText('最优组合 '+fmtPct(D.port_ret[d]),hx+18,hy-14);
-  const ex=P1X0+d/4379*(P1X1-P1X0), ey=y(D.eq_ret[d]);
+  const ex=P1X0+d/LAST*(P1X1-P1X0), ey=y(D.eq_ret[d]);
   ctx.fillStyle='#dbe7f7'; ctx.fillText('六等分 '+fmtPct(D.eq_ret[d]),ex+18,ey+34);
   ctx.restore();
   return {hx,hy,y};
@@ -940,7 +980,7 @@ function buildContrib(){
 }
 function sceneDive(t){ // 97–100 俯冲
   $('banner').classList.add('hidden'); $('p2Hud').classList.add('hidden'); $('floatTxt').classList.add('hidden');
-  const d=4379, f=clamp((t-97)/2.5,0,1), z=1+f*1.3;
+  const d=LAST, f=clamp((t-97)/2.5,0,1), z=1+f*1.3;
   const yMax=Math.max(4.2,D.port_ret[d]*1.06), y=v=>P1Y1-(v/yMax)*(P1Y1-P1Y0);
   const hx=P1X1, hy=y(D.port_ret[d]);
   drawP2Chart(d,{cx:hx,cy:hy,z});
@@ -979,7 +1019,7 @@ function sceneFinale(t){
 /* ================= 主循环 ================= */
 const LAYERS=['titleText','rules','mix','partTitle','raceHud','cards','banner','p2Hud','floatTxt','finale','jinju'];
 function hideAll(){ for(const id of LAYERS) $(id).classList.add('hidden'); }
-let PT={t:0,playing:true,last:0};
+let PT={t:0,playing:true,last:0,speed:1};
 function render(t,dt){
   ctx.fillStyle='#04070f'; ctx.fillRect(0,0,W,H);
   hideAll();
@@ -996,10 +1036,11 @@ function render(t,dt){
   else sceneFinale(t);
   $('prog').value=t;
   $('tlabel').textContent=t.toFixed(1)+'s / '+DUR+'s';
+  if(D) syncData(t);
 }
 function loop(ts){
   const dt=Math.min(0.1,(ts-PT.last)/1000||0); PT.last=ts;
-  if(PT.playing){ PT.t=Math.min(DUR,PT.t+dt); if(PT.t>=DUR){ PT.playing=false; $('btnPlay').textContent='⏵'; } }
+  if(PT.playing){ PT.t=Math.min(DUR,PT.t+dt*(PT.speed||1)); if(PT.t>=DUR){ PT.playing=false; $('btnPlay').textContent='⏵'; } }
   try{ render(PT.t,dt); }catch(err){ console.error(err); }
   requestAnimationFrame(loop);
 }
@@ -1017,9 +1058,145 @@ function fit(){
   $('stage').style.transform=`scale(${s})`;
 }
 addEventListener('resize',fit); fit();
+
+/* ================= 活数据交互层（数据轴 / 事件点评 / 曲线） ================= */
+let curDay = 0, scrubbing = false, curveOpen = false;
+const SERIES = [
+  {k:'port', name:'组合（最优配比）', color:GOLD, get:()=>D.port_ret, def:true},
+  {k:'eq', name:'等分', color:BLUE, get:()=>D.eq_ret, def:true},
+  ...MK.map(m=>({k:m.k, name:m.name, color:m.color, get:()=>D.solo_ret[m.k], def:m.k==='qqq'}))
+];
+function dataReadout(day){
+  $('dread').innerHTML = D.dates[day] + ' · 第' + epOf(day) + '期 · 组合 <b>' + fmtY(D.port_value[day]) + '</b>（' + fmtPct(D.port_ret[day]) + '）';
+}
+function syncData(t){
+  let day = null;
+  if(t >= 20.5 && t < 68) day = dayOfP1(t);
+  else if(t >= 74 && t < 97) day = dayOfP2(t);
+  if(day === null) return;
+  day = clamp(day, 0, LAST);
+  if(day !== curDay){ curDay = day; if(curveOpen) drawCurve(); }
+  if(!scrubbing){ $('dscrub').value = day; dataReadout(day); }
+}
+$('dscrub').addEventListener('pointerdown', ()=>{ scrubbing = true; });
+addEventListener('pointerup', ()=>{ scrubbing = false; });
+$('dscrub').addEventListener('input', e=>{
+  const day = clamp(parseInt(e.target.value, 10) || 0, 0, LAST);
+  curDay = day; dataReadout(day);
+  PT.playing = false; $('btnPlay').textContent = '⏵';
+  PT.t = tOfP1(day); render(PT.t, 0);
+  if(curveOpen) drawCurve();
+});
+$('speed').addEventListener('change', e=>{ PT.speed = parseFloat(e.target.value); });
+function buildChips(){
+  const box = $('evchips'); box.innerHTML = '';
+  EV.forEach((e, i)=>{
+    const b = document.createElement('button');
+    b.textContent = (e.dir === 'down' ? '▼ ' : '▲ ') + e.name;
+    b.onclick = ()=>seekEvent(i, b);
+    box.appendChild(b);
+  });
+}
+function seekEvent(i, btn){
+  const e = EV[i];
+  document.querySelectorAll('#evchips button').forEach(x=>x.classList.remove('on'));
+  if(btn) btn.classList.add('on');
+  PT.playing = false; $('btnPlay').textContent = '⏵';
+  PT.t = e.tS; render(PT.t, 0);
+  const heroV = parseFloat(e.heroChg);
+  let pairs = '';
+  for(const p of e.pairs){
+    const cur = D.solo_ret[p.m.k][e.en];
+    pairs += '<div style="margin-bottom:8px"><span style="color:#8fa3c2">' + p.m.flag + ' ' + p.m.name + '</span>' +
+      '<span style="float:right">' + fmtPct(p.hi) + ' <span style="color:#5b6b84">→</span> <b style="color:' + (cur < 0 ? '#4ade80' : '#ff6b6b') + '">' + fmtPct(cur) + '</b></span></div>';
+  }
+  const win = D.dates[e.s].replace(/-/g, '.') + ' → ' + D.dates[e.en].replace(/-/g, '.');
+  $('evpanel').innerHTML =
+    '<button class="x" onclick="document.getElementById(\'evpanel\').classList.add(\'hidden\')">✕</button>' +
+    '<div class="eb ' + (e.dir === 'up' ? 'up' : 'down') + '">' + (e.dir === 'up' ? '▲ 上涨行情' : '▼ 下跌事件') + '</div>' +
+    '<div class="ew">' + win + ' · ' + e.dur + '</div><h3>' + e.name + '</h3>' +
+    '<div class="sub">' + e.sub + '</div>' +
+    '<div class="idx"><div class="k">' + e.hero.name + '指数 · 窗内涨跌</div>' +
+    '<div class="v" style="color:' + (heroV < 0 ? '#4ade80' : '#ff6b6b') + '">' + fmtPct(heroV) + '</div></div>' +
+    '<div style="margin-top:14px"><div class="dc">定投收益率 · 高点 → 窗末</div><div class="dcv">' + pairs + '</div></div>' +
+    (e.verdict ? '<div class="verdict">' + e.verdict + '</div>' : '');
+  $('evpanel').classList.remove('hidden');
+}
+/* ---- 曲线对比 ---- */
+function buildLegend(){
+  const lg = $('curveLegend'); lg.innerHTML = '';
+  for(const s of SERIES){
+    const lab = document.createElement('label');
+    lab.innerHTML = '<input type="checkbox" ' + (s.def ? 'checked' : '') + ' data-k="' + s.k + '"> <span style="color:' + s.color + '">━</span> ' + s.name;
+    lab.querySelector('input').addEventListener('change', drawCurve);
+    lg.appendChild(lab);
+  }
+}
+function drawCurve(){
+  const cvv = $('curveCv'), r = cvv.getBoundingClientRect();
+  const dpr = Math.min(2, devicePixelRatio || 1);
+  cvv.width = Math.max(300, r.width * dpr); cvv.height = Math.max(200, r.height * dpr);
+  const g = cvv.getContext('2d'); g.scale(dpr, dpr);
+  const Wd = r.width, Hd = r.height, L = 84, R = 215, T = 26, B = 40;
+  const iw = Wd - L - R, ih = Hd - T - B;
+  const vis = SERIES.filter(s=>{
+    const inp = document.querySelector('#curveLegend input[data-k="' + s.k + '"]');
+    return inp && inp.checked;
+  });
+  if(!vis.length) return;
+  let mn = -0.35, mx = 0.5;
+  for(const s of vis){ const a = s.get(); for(let i = 0; i <= LAST; i += 7){ if(a[i] < mn) mn = a[i]; if(a[i] > mx) mx = a[i]; } }
+  mx = Math.min(6.5, mx * 1.05);
+  const X = d => L + d / LAST * iw, Y = v => T + (mx - v) / (mx - mn) * ih;
+  g.strokeStyle = 'rgba(125,143,169,.18)'; g.fillStyle = '#7d8fa9'; g.font = '15px system-ui'; g.lineWidth = 1;
+  const stepPct = mx > 3 ? 1 : 0.5;
+  for(let v = 0; v <= mx; v += stepPct){
+    g.beginPath(); g.moveTo(L, Y(v)); g.lineTo(L + iw, Y(v)); g.stroke();
+    g.fillText('+' + Math.round(v * 100) + '%', 18, Y(v) + 5);
+  }
+  g.beginPath(); g.moveTo(L, Y(0)); g.lineTo(L + iw, Y(0)); g.strokeStyle = 'rgba(232,238,247,.45)'; g.stroke();
+  g.fillStyle = '#7d8fa9';
+  for(let yr = 2010; yr <= parseInt(D.dates[LAST].slice(0, 4)); yr += 2){
+    const d = D.dates.findIndex(x => x >= yr + '-01-01');
+    if(d > 0){ g.fillText(String(yr), X(d) - 14, T + ih + 26); g.strokeStyle = 'rgba(125,143,169,.10)'; g.beginPath(); g.moveTo(X(d), T); g.lineTo(X(d), T + ih); g.stroke(); }
+  }
+  for(const s of vis){
+    const a = s.get(); g.strokeStyle = s.color; g.lineWidth = s.k === 'port' ? 3 : 1.6; g.beginPath();
+    const stp = Math.max(1, Math.floor(LAST / iw));
+    for(let i = 0; i <= LAST; i += stp){ const xx = X(i), yy = Y(a[i]); i === 0 ? g.moveTo(xx, yy) : g.lineTo(xx, yy); }
+    g.stroke();
+    g.fillStyle = s.color; g.font = 'bold 16px system-ui';
+    g.fillText(s.name + ' ' + fmtPct(a[LAST]), L + iw + 12, Y(a[LAST]) + 5);
+  }
+  const cd = clamp(curDay, 0, LAST);
+  g.strokeStyle = 'rgba(245,197,66,.55)'; g.lineWidth = 1; g.beginPath(); g.moveTo(X(cd), T); g.lineTo(X(cd), T + ih); g.stroke();
+  let read = D.dates[cd] + ' · ';
+  for(const s of vis){
+    const a = s.get(); g.fillStyle = s.color; g.beginPath(); g.arc(X(cd), Y(a[cd]), 4.5, 0, 7); g.fill();
+    read += s.name + ' ' + fmtPct(a[cd]) + ' ｜ ';
+  }
+  $('curveRead').textContent = read.replace(/ ｜ $/, '');
+  g.fillStyle = '#f5c542'; g.font = 'bold 16px system-ui'; g.fillText(D.dates[cd], X(cd) + 10, T + 18);
+}
+$('btnCurve').onclick = ()=>{ curveOpen = true; $('curveWrap').classList.remove('hidden'); drawCurve(); };
+$('btnCurveX').onclick = ()=>{ curveOpen = false; $('curveWrap').classList.add('hidden'); };
+addEventListener('resize', ()=>{ if(curveOpen) drawCurve(); });
+
 /* ---------- 启动 ---------- */
-fetch('data/engine.json').then(r=>{ if(!r.ok) throw new Error('engine.json 加载失败 '+r.status); return r.json(); })
-.then(j=>{ D=j; buildEvents(); buildCards(); buildP2Banners(); requestAnimationFrame(loop); })
+fetch('/api/race/engine').then(r=>{ if(!r.ok) throw new Error('live '+r.status); return r.json(); })
+.catch(()=>fetch('data/engine.json').then(r=>{ if(!r.ok) throw new Error('engine.json 加载失败 '+r.status); return r.json(); }))
+.then(j=>{ D=j;
+  LAST = D.dates.length - 1;
+  PART1_KF = PART1_KF.map(([tt,dd])=>[tt, Math.round(dd * LAST / 4379)]);
+  $('dscrub').max = LAST;
+  try{
+    const diff = ((D.portfolio.value - D.portfolio.eq_value) / 10000).toFixed(1);
+    $('jj1').innerHTML = '同样的风险，最优分配比平均分配多赚 <b>' + diff + ' 万元</b>；';
+    $('jjSrc').innerHTML = $('jjSrc').innerHTML.replace(/截至 [\d-]+/, '截至 ' + D.dates[LAST]);
+  }catch(e){}
+  buildEvents(); buildCards(); buildP2Banners(); buildChips(); buildLegend();
+  dataReadout(0);
+  requestAnimationFrame(loop); })
 .catch(err=>{ const e=$('err'); e.classList.remove('hidden'); e.textContent='数据加载失败：'+err.message+'（请用 HTTP 服务打开本页，不要直接双击文件）'; });
 </script>
 </body>
