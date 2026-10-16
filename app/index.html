@@ -57,7 +57,7 @@ table{font-size:clamp(9.5px,.58vw,12px)}.ph{font-size:clamp(10px,.62vw,12.5px)}
 'use strict';
 const I18N={
 zh:{title:'GROKBOT + JEV — 交易办公室 (PAPER)',sub:'DEGEN 实验室 · SOLANA MEME 币 · 桌面精选',paper:'📄 PAPER · 虚拟资金',
- nav_office:'办公室',nav_trade:'交易台',nav_markets:'行情',nav_race:'赛跑',nav_spider:'蜘蛛',nav_safety:'安全',
+ nav_office:'办公室',nav_trade:'交易台',nav_markets:'行情',nav_race:'赛跑',nav_spider:'蜘蛛',nav_safety:'财经观测台',
  saldo:'余额',jev:'JEV · 分析',thr_note:'— 桌面规则（引擎）',fail_closed:'所有否决一律失败关闭',
  th_autopre:'自动预审',th_veto:'否决钥匙',day:'日',live:'实况',delayed:'延迟',nodata:'无数据',cb:'熔断',cb_ok:'熔断正常',clk_suffix:' 里斯本',gates:['RugCheck 报告','X 主页','VET 只放 GOOD','真实官网','CA 已确认','无付费热度','流动性 ≥ $40k','量 < 10× 流动性','交易对 ≥ 30 分钟','boosts < 30'],
  st_chief:'从不无共识开仓',st_scan:'寻找异动',st_vet:'链上风险，是否真实？',st_social:'项目的 X 账号',st_risk:'下多少、进不进',st_fills:'执行（纸面）',st_journal:'记录每一张工单',st_crawler:'先读完，再由桌面决定',
@@ -72,7 +72,7 @@ zh:{title:'GROKBOT + JEV — 交易办公室 (PAPER)',sub:'DEGEN 实验室 · SO
  pills_note:' — 顺序就是关键：',hard_note:'算术，不花钱',vet_note:'CHIEF 的否决项',yes:'是',no:'否',
  stocks:'股票交易员',stocks_total:'总市值',stocks_today:'今日盈亏',stocks_last:'最近工单',stocks_none:'暂无工单',stocks_paper:'模拟盘'},
 en:{title:'GROKBOT + JEV — Trading Office (PAPER)',sub:'DEGEN LAB · SOLANA MEMECOINS · DESK PICKS',paper:'📄 PAPER · VIRTUAL MONEY',
- nav_office:'Office',nav_trade:'Trade Desk',nav_markets:'Markets',nav_race:'Race',nav_spider:'Spider',nav_safety:'Safety',
+ nav_office:'Office',nav_trade:'Trade Desk',nav_markets:'Markets',nav_race:'Race',nav_spider:'Spider',nav_safety:'Observatory',
  saldo:'BALANCE',jev:'JEV · ANALYSIS',thr_note:'— desk rules (engine)',fail_closed:'EVERY VETO FAILS CLOSED',
  th_autopre:'AUTO-PRE',th_veto:'VETO KEYS',day:'DAY',live:'LIVE',delayed:'DELAYED',nodata:'NO DATA',cb:'CIRCUIT BREAKER',cb_ok:'breaker OK',clk_suffix:' PT',gates:['RugCheck report','X profile','VET GOOD only','real website','CA confirmed','no paid hype','liquidity ≥ $40k','vol < 10× liq','pair ≥ 30 min','boosts < 30'],
  st_chief:'never opens without consensus',st_scan:'hunting what moves',st_vet:'on-chain risk, is it real?',st_social:"the project's X account",st_risk:'how much, and whether in',st_fills:'execution (paper)',st_journal:'logs every ticket',st_crawler:'reads first, desk decides after',
@@ -142,7 +142,7 @@ window.I18N=I18N;window.trLog=trLog;
 
 </script></head><body><div id="stage">
 <div class="hd"><div class="lg"><svg width="22" height="22" viewBox="0 0 22 22"><circle cx="11" cy="11" r="9" fill="#ff4fb4"/><rect x="6" y="8" width="3" height="4" fill="#111"/><rect x="13" y="8" width="3" height="4" fill="#111"/></svg></div>
-<div><h1>GROKBOT + JEV</h1><div class="sub" id="hsub">DEGEN 实验室 · SOLANA MEME 币 · 桌面精选</div></div><span class="paper" id="hpaper">📄 PAPER · 虚拟资金</span><nav id="roomnav"><a href="index.html" class="on" id="rn_office">办公室</a><a href="trade.html" id="rn_trade">交易台</a><a href="markets.html" id="rn_markets">行情</a><a href="race.html" id="rn_race">赛跑</a><a href="spider.html" id="rn_spider">蜘蛛</a><a href="safety.html" id="rn_safety">安全</a><button id="langBtn">EN</button></nav>
+<div><h1>GROKBOT + JEV</h1><div class="sub" id="hsub">DEGEN 实验室 · SOLANA MEME 币 · 桌面精选</div></div><span class="paper" id="hpaper">📄 PAPER · 虚拟资金</span><nav id="roomnav"><a href="index.html" class="on" id="rn_office">办公室</a><a href="trade.html" id="rn_trade">交易台</a><a href="markets.html" id="rn_markets">行情</a><a href="race.html" id="rn_race">赛跑</a><a href="spider.html" id="rn_spider">蜘蛛</a><a href="safety.html" id="rn_safety">财经观测台</a><button id="langBtn">EN</button></nav>
 <div class="sp"></div><div class="day" id="day">—</div><div class="day" id="live">—</div><div class="clk" id="clk">--:-- PT</div></div>
 <div class="cards" id="cardsL"></div>
 <div id="ofr"><div id="owrap"><img id="obg" src="/app/assets/office-bg.jpg" alt="Escritório DEGEN LAB"><canvas id="oc" width="2048" height="1152"></canvas><div id="stockchip"></div><div id="aichip"></div></div></div>
