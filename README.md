@@ -41,7 +41,7 @@ node modules/spider/server.mjs      # 蜘蛛舞台，端口 4317（可选）
 
 本仓内置喂入器把 FinSight 财经快讯接了进去：
 
-- `node scripts/spider_news_feeder.mjs`（`bash scripts/run.sh` 会自动带起）：用蜘蛛自带的 SessionStore + PreviewHub 开一个**横屏（landscape）实时会话**，每 45 秒拉一次 `/api/finance/news`（东财/新浪双源），新标题按关键词分到三条分支——市场动态 / 公司行业 / 宏观政策——推成事件；点蛛网节点可看详情与原文链接。
+- `node scripts/spider_news_feeder.mjs`（`bash scripts/run.sh` 会自动带起）：用蜘蛛自带的 SessionStore + PreviewHub 开一个**横屏（landscape）逐词（word）实时会话**，每 45 秒拉一次 `/api/finance/news`（东财/新浪双源），把新标题拼成一页文本（中文分词）以约 8 词/秒逐词滴灌：蜘蛛沿文字爬行抓词，**关键词跳进对应分支**——央行/政策类词→宏观政策、指数/涨跌类词→市场动态、其余词→公司行业；点任意词可看分流依据（命中了哪个关键词）与原文链接。一页织完且有新快讯排队时自动翻页。
 - 会话地址（带进程令牌）写在 `data/spider-live.json`，主服务以 `/api/fusion/spider-live` 暴露心跳；蜘蛛分室优先加载实时会话，喂入器离线时自动回退到 :4317 的预置演示。
 - 蜘蛛分室舞台下方另有「最新快讯」列表，标题即原文链接，可直接点开。
 - 零第三方依赖：喂入器只用蜘蛛自带 lib 与 Node 内置模块，不需要给 mcp/ 跑 npm ci。
