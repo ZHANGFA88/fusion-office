@@ -2079,10 +2079,15 @@ def _fusion_safety():
             continue
     return {'online': False}
 
+def _race_engine_path():
+    """赛跑引擎数据：优先运行时刷新的活数据（data/race-engine-live.json），否则用仓内静态版。"""
+    live = os.path.join(DATA_DIR, 'race-engine-live.json')
+    return live if os.path.exists(live) else os.path.join(BASE_DIR, 'modules', 'race', 'data', 'engine.json')
+
+
 def _fusion_race():
     try:
-        with open(os.path.join(BASE_DIR, 'modules', 'race', 'data', 'engine.json'),
-                  encoding='utf-8') as f:
+        with open(_race_engine_path(), encoding='utf-8') as f:
             eng = json.load(f)
         port = eng.get('portfolio') or {}
         dates = eng.get('dates') or []
@@ -2684,6 +2689,10 @@ class Handler(SimpleHTTPRequestHandler):
                 return self._api_fusion_degen_state(q)
             if path == '/api/fusion/spider-live':
                 return self._api_fusion_spider_live(q)
+            if path == '/api/race/engine':
+                return self._api_race_engine(q)
+            if path == '/api/race/meta':
+                return self._api_race_meta(q)
             if path == '/api/trade/account':
                 return self._api_trade_account(q)
             if path == '/api/trade/positions':
@@ -2855,6 +2864,41 @@ class Handler(SimpleHTTPRequestHandler):
         except Exception:
             return self._json(200, {'ok': False, 'live': False,
                                     'error': 'spider news feeder not running (node scripts/spider_news_feeder.mjs)'})
+
+    def _api_race_engine(self, q):
+        """/api/race/engine：赛跑页数据。活数据（每日刷新，终点延到最近交易日）优先，静态版兜底。"""
+        try:
+            with open(_race_engine_path(), 'rb') as f:
+                data = f.read()
+            self.send_response(200)
+            self.send_header('Content-Type', 'application/json; charset=utf-8')
+            self.send_header('Content-Length', str(len(data)))
+            self.send_header('Cache-Control', 'no-cache')
+            self.end_headers()
+            self.wfile.write(data)
+            return
+        except Exception as e:
+            return self._json(500, {'ok': False, 'error': str(e)})
+
+    def _api_race_meta(self, q):
+        """/api/race/meta：赛跑数据来源与新鲜度（活/静态、截至日期、构建时间）。"""
+        live = os.path.join(DATA_DIR, 'race-engine-live.json')
+        if os.path.exists(live):
+            meta = {}
+            try:
+                with open(os.path.join(DATA_DIR, 'race-meta.json'), encoding='utf-8') as f:
+                    meta = json.load(f)
+            except Exception:
+                pass
+            return self._json(200, {'ok': True, 'source': 'live', **meta})
+        try:
+            with open(_race_engine_path(), encoding='utf-8') as f:
+                eng = json.load(f)
+            dates = eng.get('dates') or []
+            return self._json(200, {'ok': True, 'source': 'bundled',
+                                    'days': len(dates), 'last_date': dates[-1] if dates else None})
+        except Exception as e:
+            return self._json(200, {'ok': False, 'error': str(e)})
 
     # ========== V2 模拟交易台 API ==========
     def _api_trade_account(self, q):
@@ -3213,6 +3257,29 @@ if __name__ == '__main__':
                 time.sleep(55)
         tg = threading.Thread(target=bg_global, daemon=True)
         tg.start()
+        # 赛跑活数据：启动后 90 秒首刷，之后每 6 小时检查；活数据截至日 < 今天就重跑管线
+        def bg_race():
+            import subprocess as _sp
+            time.sleep(90)
+            while True:
+                try:
+                    need = True
+                    mp = os.path.join(DATA_DIR, 'race-meta.json')
+                    if os.path.exists(mp):
+                        with open(mp, encoding='utf-8') as f:
+                            m = json.load(f)
+                        need = (m.get('last_date') or '') < time.strftime('%Y-%m-%d')
+                    if need:
+                        r = _sp.run([sys.executable,
+                                     os.path.join(BASE_DIR, 'modules', 'race', 'engine', 'refresh.py')],
+                                    capture_output=True, text=True, timeout=1500)
+                        print('[race-refresh]', (r.stdout or '').strip().split('\n')[-1] if r.stdout else '',
+                              (r.stderr or '')[-300:] if r.returncode else '')
+                except Exception as e:
+                    print('[race-refresh] failed:', e)
+                time.sleep(6 * 3600)
+        tr = threading.Thread(target=bg_race, daemon=True)
+        tr.start()
         srv = ThreadingHTTPServer((HOST, PORT), Handler)
         print(f'FinSight serving at http://{HOST}:{PORT}')
         try:
