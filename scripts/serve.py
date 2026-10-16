@@ -868,6 +868,48 @@ def save_alerts(alerts):
     return len(alerts)
 
 # ========== 历史 K 线 ==========
+def fetch_search_sina(q):
+    """股票搜索（新浪 suggest）：名称/代码/拼音 → 统一代码。type 11=A股 31=港股 41=美股，其余（基金等）过滤。"""
+    import re as _re
+    url = 'https://suggest3.sinajs.cn/suggest/type=11,31,41&key=' + urllib.parse.quote(q)
+    _throttle_url(url)
+    req = urllib.request.Request(url, headers={'User-Agent': UA, 'Referer': 'https://finance.sina.com.cn/'})
+    with urllib.request.urlopen(req, timeout=8) as r:
+        raw = r.read().decode('gbk', 'ignore')
+    m = _re.search(r'"(.*)"', raw, _re.S)
+    if not m:
+        return []
+    out, seen = [], set()
+    for item in m.group(1).split(';'):
+        p = item.split(',')
+        if len(p) < 4:
+            continue
+        name, typ, code, full = ((p[4].strip() if len(p) > 4 and p[4].strip() else p[0].strip()),
+                                 p[1].strip(), p[2].strip(), p[3].strip())
+        sym = market = None
+        if typ == '11':
+            if full.startswith('sh'):
+                sym, market = code + '.SS', 'CN'
+            elif full.startswith('sz'):
+                sym, market = code + '.SZ', 'CN'
+        elif typ == '31':
+            try:
+                sym, market = str(int(code)).zfill(4) + '.HK', 'HK'
+            except ValueError:
+                continue
+        elif typ == '41':
+            sym, market = code.upper(), 'US'
+        if not sym or sym in seen:
+            continue
+        seen.add(sym)
+        out.append({'symbol': sym, 'name': name or sym, 'market': market})
+        if len(out) >= 12:
+            break
+    if any('\u4e00' <= ch <= '\u9fff' for ch in q):
+        prio = {'CN': 0, 'HK': 1, 'US': 2}
+        out.sort(key=lambda x: prio.get(x['market'], 3))
+    return out
+
 def fetch_kline_eastmoney(symbol, period='daily', count=250):
     """A股 K线走东方财富（不限流，秒回）"""
     secid = _eastmoney_secid(symbol)
@@ -2335,6 +2377,33 @@ def _trade_fee(market, side, amount):
         return round(amount * (0.0003 + 0.000057), 2)
     return 0.0
 
+_ADHOC_Q = {}
+_ADHOC_Q_LOCK = threading.Lock()
+
+
+def _adhoc_quotes(symbols):
+    """非自选代码的实时报价（搜索选中后看价/估算用）：20 秒缓存，避免每次刷新都现拉多源。"""
+    now = time.time()
+    out, miss = {}, []
+    with _ADHOC_Q_LOCK:
+        for s in symbols:
+            hit = _ADHOC_Q.get(s)
+            if hit and now - hit[0] < 20:
+                out[s] = hit[1]
+            else:
+                miss.append(s)
+    if miss:
+        try:
+            got = fetch_quotes(miss, fallback_db=False)
+        except Exception:
+            got = {}
+        with _ADHOC_Q_LOCK:
+            for s, qt in got.items():
+                if qt and qt.get('price'):
+                    _ADHOC_Q[s] = (now, qt)
+        out.update({s: qt for s, qt in got.items() if qt and qt.get('price')})
+    return out
+
 def _trade_quote(symbol):
     """单只现价（复用 FinSight fetch_quotes 口径）。返回 (quote, is_stale)。
     无报价（实时源+DB缓存均无）返回 (None, False)——绝不伪造价格。"""
@@ -2666,6 +2735,8 @@ class Handler(SimpleHTTPRequestHandler):
                 return self._api_cyq(q)
             if path == '/api/finance/indices':
                 return self._api_indices(q)
+            if path == '/api/finance/search':
+                return self._api_search(q)
             if path == '/api/finance/global':
                 return self._api_global(q)
             if path == '/api/finance/sectors':
@@ -2780,15 +2851,28 @@ class Handler(SimpleHTTPRequestHandler):
         return self._json(200, {'ok': True, 'count': len(order)})
 
     def _api_quotes(self, q):
-        """立即返回DB数据（秒回），实时刷新由后台线程做"""
+        """自选走 DB 秒回（后台线程刷新）；symbols 参数中的非自选代码走实时多源现拉（20 秒缓存）"""
+        raw = (q.get('symbols') or [''])[0]
+        want = [x.strip().upper() for x in raw.split(',') if x.strip()] if raw else []
         with db() as c:
             syms = [r['symbol'] for r in c.execute('SELECT symbol FROM watchlist ORDER BY sort_order')]
             latest = get_latest_from_db(syms)
-        items = [latest[s] for s in syms if s in latest]
+        if not want:
+            items = [latest[s] for s in syms if s in latest]
+        else:
+            items, extra = [], []
+            for s in want:
+                if s in latest:
+                    items.append(latest[s])
+                else:
+                    extra.append(s)
+            if extra:
+                got = _adhoc_quotes(extra)
+                items += [got[s] for s in extra if s in got]
         now = int(time.time())
         fresh = sum(1 for i in items if now - (i.get('ts') or 0) < 120)
         return self._json(200, {'ok': True, 'items': items, 'ts': now,
-                                'fresh': fresh, 'total': len(syms)})
+                                'fresh': fresh, 'total': len(items)})
 
     def _api_kline(self, q):
         symbol = (q.get('symbol') or [''])[0]
@@ -3030,6 +3114,17 @@ class Handler(SimpleHTTPRequestHandler):
         idx = _index_cache_get()
         return self._json(200, {'ok': True, 'items': idx, 'trend': classify_index_trend(idx),
                                 'ts': int(time.time())})
+
+    def _api_search(self, q):
+        """股票搜索：名称/代码/拼音 → 可下单代码（新浪 suggest 单源）"""
+        key = ((q.get('q') or [''])[0] or '').strip()
+        if not key:
+            return self._json(200, {'ok': True, 'items': []})
+        try:
+            items = fetch_search_sina(key)
+        except Exception as e:
+            return self._json(200, {'ok': False, 'error': str(e)[:120], 'items': []})
+        return self._json(200, {'ok': True, 'items': items})
 
     def _api_global(self, q):
         """全球大盘指数（美股/夜盘期货/恒生/日经/欧股/加密，带缓存）"""
