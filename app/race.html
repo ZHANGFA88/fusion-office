@@ -26,8 +26,8 @@ iframe{width:100%;height:76vh;border:0;border-radius:7px;background:#04060d;box-
 <iframe src="/modules/race/index.html" title="race"></iframe>
 <script>
 const LANG=(()=>{try{const q=new URLSearchParams(location.search).get('lang');if(q==='en'||q==='zh')return q}catch(e){}try{return localStorage.getItem('office_lang')||'zh'}catch(e){return'zh'}})();
-const D={zh:{sub:'DEGEN 实验室 · SOLANA MEME 币 · 桌面精选',paper:'📄 PAPER · 虚拟资金',office:'办公室',trade:'交易台',markets:'行情',race:'赛跑',spider:'蜘蛛',safety:'安全',ttl:'定投赛跑放映室',final:'组合终值',ret:'组合收益',irr:'年化 IRR',mdd:'最大回撤',eq:'等分基准',per:'期数（月）'},
-en:{sub:'DEGEN LAB · SOLANA MEMECOINS · DESK PICKS',paper:'📄 PAPER · VIRTUAL MONEY',office:'Office',trade:'Trade Desk',markets:'Markets',race:'Race',spider:'Spider',safety:'Safety',ttl:'DCA RACE THEATER',final:'Final value',ret:'Portfolio return',irr:'IRR',mdd:'Max drawdown',eq:'Equal-weight',per:'Periods (months)'}};
+const D={zh:{sub:'DEGEN 实验室 · SOLANA MEME 币 · 桌面精选',paper:'📄 PAPER · 虚拟资金',office:'办公室',trade:'交易台',markets:'行情',race:'赛跑',spider:'蜘蛛',safety:'财经观测台',ttl:'定投赛跑放映室',final:'组合终值',ret:'组合收益',irr:'年化 IRR',mdd:'最大回撤',eq:'等分基准',per:'期数（月）'},
+en:{sub:'DEGEN LAB · SOLANA MEMECOINS · DESK PICKS',paper:'📄 PAPER · VIRTUAL MONEY',office:'Office',trade:'Trade Desk',markets:'Markets',race:'Race',spider:'Spider',safety:'Observatory',ttl:'DCA RACE THEATER',final:'Final value',ret:'Portfolio return',irr:'IRR',mdd:'Max drawdown',eq:'Equal-weight',per:'Periods (months)'}};
 const T=D[LANG];document.documentElement.lang=LANG==='zh'?'zh-CN':'en';
 const $=i=>document.getElementById(i);
 const f2=(v,d=2)=>v==null||isNaN(v)?'—':(+v).toLocaleString(LANG==='zh'?'zh-CN':'en-US',{minimumFractionDigits:d,maximumFractionDigits:d});

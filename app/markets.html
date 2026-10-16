@@ -38,8 +38,8 @@ table{width:100%;border-collapse:collapse;font-size:12px}td,th{padding:4px 5px;t
 </div>
 <script>
 const LANG=(()=>{try{const q=new URLSearchParams(location.search).get('lang');if(q==='en'||q==='zh')return q}catch(e){}try{return localStorage.getItem('office_lang')||'zh'}catch(e){return'zh'}})();
-const D={zh:{sub:'DEGEN 实验室 · SOLANA MEME 币 · 桌面精选',paper:'📄 PAPER · 虚拟资金',office:'办公室',trade:'交易台',markets:'行情',race:'赛跑',spider:'蜘蛛',safety:'安全',ttl:'行情室',watch:'自选股',picks:'今日精选',sec:'热门板块',news:'市场快讯',sec_src:'东方财富',c_sym:'代码',c_name:'名称',c_px:'现价',c_chg:'涨跌',c_hl:'高 / 低',na:'沙箱内板块源受限时为空（部署机正常）'},
-en:{sub:'DEGEN LAB · SOLANA MEMECOINS · DESK PICKS',paper:'📄 PAPER · VIRTUAL MONEY',office:'Office',trade:'Trade Desk',markets:'Markets',race:'Race',spider:'Spider',safety:'Safety',ttl:'MARKETS',watch:'Watchlist',picks:'Daily picks',sec:'Hot sectors',news:'Market news',sec_src:'Eastmoney',c_sym:'Symbol',c_name:'Name',c_px:'Price',c_chg:'Change',c_hl:'High / Low',na:'empty when the sector source is blocked in sandbox'}};
+const D={zh:{sub:'DEGEN 实验室 · SOLANA MEME 币 · 桌面精选',paper:'📄 PAPER · 虚拟资金',office:'办公室',trade:'交易台',markets:'行情',race:'赛跑',spider:'蜘蛛',safety:'财经观测台',ttl:'行情室',watch:'自选股',picks:'今日精选',sec:'热门板块',news:'市场快讯',sec_src:'东方财富',c_sym:'代码',c_name:'名称',c_px:'现价',c_chg:'涨跌',c_hl:'高 / 低',na:'沙箱内板块源受限时为空（部署机正常）'},
+en:{sub:'DEGEN LAB · SOLANA MEMECOINS · DESK PICKS',paper:'📄 PAPER · VIRTUAL MONEY',office:'Office',trade:'Trade Desk',markets:'Markets',race:'Race',spider:'Spider',safety:'Observatory',ttl:'MARKETS',watch:'Watchlist',picks:'Daily picks',sec:'Hot sectors',news:'Market news',sec_src:'Eastmoney',c_sym:'Symbol',c_name:'Name',c_px:'Price',c_chg:'Change',c_hl:'High / Low',na:'empty when the sector source is blocked in sandbox'}};
 const T=D[LANG];document.documentElement.lang=LANG==='zh'?'zh-CN':'en';
 const $=i=>document.getElementById(i),esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const f2=(v,d=2)=>v==null||isNaN(v)?'—':(+v).toLocaleString(LANG==='zh'?'zh-CN':'en-US',{minimumFractionDigits:d,maximumFractionDigits:d});

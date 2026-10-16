@@ -112,14 +112,14 @@ label{font-size:10px;color:var(--mut);letter-spacing:1px;display:block;margin:8p
 <div id="toast"></div>
 <script>
 const LANG=(()=>{try{const q=new URLSearchParams(location.search).get('lang');if(q==='en'||q==='zh')return q}catch(e){}try{return localStorage.getItem('office_lang')||'zh'}catch(e){return'zh'}})();
-const D={zh:{sub:'DEGEN 实验室 · SOLANA MEME 币 · 桌面精选',paper:'📄 PAPER · 虚拟资金',office:'办公室',trade:'交易台',markets:'行情',race:'赛跑',spider:'蜘蛛',safety:'安全',ttl:'股票交易台 · 模拟盘',
+const D={zh:{sub:'DEGEN 实验室 · SOLANA MEME 币 · 桌面精选',paper:'📄 PAPER · 虚拟资金',office:'办公室',trade:'交易台',markets:'行情',race:'赛跑',spider:'蜘蛛',safety:'财经观测台',ttl:'股票交易台 · 模拟盘',
  cash:'现金',eq:'权益',pv:'持仓市值',pos:'持仓',ord:'下单',ords:'工单（最近）',reset:'重置模拟账户',news:'最新快讯',
  f_mkt:'市场',f_sym:'代码',f_side:'方向',f_type:'类型',f_price:'限价',f_qty:'数量',buy:'买入',sell:'卖出',market:'市价',limit:'限价',submit:'提交订单',
  c_mkt:'市场',c_sym:'代码',c_qty:'数量',c_sell:'可卖',c_cost:'成本',c_px:'现价',c_mv:'市值',c_share:'占比',c_pnl:'盈亏',c_time:'时间',c_side:'方向',c_fill:'成交价',c_fee:'费用',c_st:'状态',
  fees:'模拟费率',rules:'模拟规则：A股买入 100 股整数手、T+1 当日买入不可卖；市价单按最新报价成交；限价单挂单等触发。真实下单通道已留口、未接入。',
  est:'预估金额',estfee:'预估费用',filled:'已成交',open:'挂单中',cancelled:'已撤销',cancel:'撤单',none:'暂无',ok:'工单 #',fail:'下单失败',stale:'旧价',
  pd:'日K',pw:'周K',pm:'月K',searchPh:'🔍 搜股票买入：名称 / 代码 / 拼音（如 比亚迪、腾讯、nvda、00700）',noRes:'没找到，换个关键词试试',hai:'🤖 AI 炒股小队（办公室八人格）',aiOn:'⏸ 停用小队',aiOff:'▶ 启用小队',aiMin:'分钟/轮',aiNote:'只操作模拟盘：股票池=自选+精选，规则评分+风控闸门，每笔单都带理由（见工单备注）',aiOffState:'未启用',aiNoEng:'引擎未运行（用 run.sh 启动后生效）',aiRun:'运行中',aiRound:'第',aiRound2:'轮',aiNext:'下轮',prof_cons:'保守',prof_bal:'平衡',prof_aggr:'激进',half:'半仓',all:'全仓',rsiOb:'超买',rsiOs:'超卖',rsiN:'中性',gold:'金叉',dead:'死叉',up:'多头',dn:'空头'},
-en:{sub:'DEGEN LAB · SOLANA MEMECOINS · DESK PICKS',paper:'📄 PAPER · VIRTUAL MONEY',office:'Office',trade:'Trade Desk',markets:'Markets',race:'Race',spider:'Spider',safety:'Safety',ttl:'STOCK DESK · PAPER',
+en:{sub:'DEGEN LAB · SOLANA MEMECOINS · DESK PICKS',paper:'📄 PAPER · VIRTUAL MONEY',office:'Office',trade:'Trade Desk',markets:'Markets',race:'Race',spider:'Spider',safety:'Observatory',ttl:'STOCK DESK · PAPER',
  cash:'Cash',eq:'Equity',pv:'Positions value',pos:'Positions',ord:'New order',ords:'Orders (recent)',reset:'Reset paper account',news:'Latest news',
  f_mkt:'Market',f_sym:'Symbol',f_side:'Side',f_type:'Type',f_price:'Limit price',f_qty:'Quantity',buy:'BUY',sell:'SELL',market:'Market',limit:'Limit',submit:'Place order',
  c_mkt:'Market',c_sym:'Symbol',c_qty:'Qty',c_sell:'Sellable',c_cost:'Cost',c_px:'Price',c_mv:'Value',c_share:'Share',c_pnl:'P&L',c_time:'Time',c_side:'Side',c_fill:'Fill',c_fee:'Fee',c_st:'Status',
